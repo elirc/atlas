@@ -25,10 +25,13 @@ public class ListClientOrgsTests
         return repo;
     }
 
+    private static ListClientOrgs OpsList(InMemoryClientOrgRepository repo) =>
+        new(repo, StubContext.Ops());
+
     [Fact]
     public async Task Pages_newest_first_and_walks_to_exhaustion()
     {
-        var useCase = new ListClientOrgs(Seeded("alpha", "beta", "gamma"));
+        var useCase = OpsList(Seeded("alpha", "beta", "gamma"));
 
         Page<ClientOrg> first = await useCase.ExecuteAsync(null, 2, CancellationToken.None);
 
@@ -47,7 +50,7 @@ public class ListClientOrgsTests
     {
         // LEARN: the limit+1 probe's edge case — exactly `limit` rows must produce
         // NextCursor = null, not a cursor pointing at an empty page.
-        var useCase = new ListClientOrgs(Seeded("alpha", "beta"));
+        var useCase = OpsList(Seeded("alpha", "beta"));
 
         Page<ClientOrg> page = await useCase.ExecuteAsync(null, 2, CancellationToken.None);
 
@@ -61,7 +64,7 @@ public class ListClientOrgsTests
     [InlineData(101)]
     public async Task Out_of_range_limit_is_rejected(int limit)
     {
-        var useCase = new ListClientOrgs(Seeded("alpha"));
+        var useCase = OpsList(Seeded("alpha"));
 
         await Assert.ThrowsAsync<RequestValidationException>(
             () => useCase.ExecuteAsync(null, limit, CancellationToken.None));
@@ -70,7 +73,7 @@ public class ListClientOrgsTests
     [Fact]
     public async Task Garbage_cursor_is_rejected()
     {
-        var useCase = new ListClientOrgs(Seeded("alpha"));
+        var useCase = OpsList(Seeded("alpha"));
 
         await Assert.ThrowsAsync<RequestValidationException>(
             () => useCase.ExecuteAsync("???", 10, CancellationToken.None));

@@ -31,6 +31,7 @@ public class ModelMappingTests : IClassFixture<AtlasApiFactory>
         "EngagementChecklistItem.IsComplete", // computed from CompletedAtUtc
         "ExpenseClaim.Status", // computed from Approval + ReimbursedAtUtc (S08)
         "ApiKey.IsActive", // computed from RevokedAtUtc (S10)
+        "VendorComparisonReport.IsClean", // computed from DivergentCount == 0 (S12)
     ];
 
     [Fact]

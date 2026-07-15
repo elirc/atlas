@@ -200,6 +200,33 @@ namespace Atlas.Infrastructure.Persistence.Migrations
                     b.ToTable("client_orgs", (string)null);
                 });
 
+            modelBuilder.Entity("Atlas.Domain.Quotes.Quote", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Country")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character(3)")
+                        .IsFixedLength();
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OrgId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrgId", "CreatedAtUtc", "Id");
+
+                    b.ToTable("quotes", (string)null);
+                });
+
             modelBuilder.Entity("Atlas.Domain.Workforce.EmploymentRecord", b =>
                 {
                     b.Property<Guid>("Id")
@@ -279,6 +306,143 @@ namespace Atlas.Infrastructure.Persistence.Migrations
                     b.HasIndex("OrgId", "CreatedAtUtc", "Id");
 
                     b.ToTable("workers", (string)null);
+                });
+
+            modelBuilder.Entity("Atlas.Domain.Quotes.Quote", b =>
+                {
+                    b.OwnsOne("Atlas.Domain.Money", "DisplayTotal", b1 =>
+                        {
+                            b1.Property<Guid>("QuoteId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<decimal>("Amount")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("numeric(18,2)");
+
+                            b1.Property<string>("Currency")
+                                .IsRequired()
+                                .HasMaxLength(3)
+                                .HasColumnType("character(3)")
+                                .IsFixedLength();
+
+                            b1.HasKey("QuoteId");
+
+                            b1.ToTable("quotes");
+
+                            b1.WithOwner()
+                                .HasForeignKey("QuoteId");
+                        });
+
+                    b.OwnsOne("Atlas.Domain.Money", "Gross", b1 =>
+                        {
+                            b1.Property<Guid>("QuoteId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<decimal>("Amount")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("numeric(18,2)");
+
+                            b1.Property<string>("Currency")
+                                .IsRequired()
+                                .HasMaxLength(3)
+                                .HasColumnType("character(3)")
+                                .IsFixedLength();
+
+                            b1.HasKey("QuoteId");
+
+                            b1.ToTable("quotes");
+
+                            b1.WithOwner()
+                                .HasForeignKey("QuoteId");
+                        });
+
+                    b.OwnsOne("Atlas.Domain.Money", "TotalEmployerCost", b1 =>
+                        {
+                            b1.Property<Guid>("QuoteId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<decimal>("Amount")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("numeric(18,2)");
+
+                            b1.Property<string>("Currency")
+                                .IsRequired()
+                                .HasMaxLength(3)
+                                .HasColumnType("character(3)")
+                                .IsFixedLength();
+
+                            b1.HasKey("QuoteId");
+
+                            b1.ToTable("quotes");
+
+                            b1.WithOwner()
+                                .HasForeignKey("QuoteId");
+                        });
+
+                    b.OwnsMany("Atlas.Domain.Quotes.QuoteLine", "Lines", b1 =>
+                        {
+                            b1.Property<Guid>("Id")
+                                .HasColumnType("uuid");
+
+                            b1.Property<string>("Kind")
+                                .IsRequired()
+                                .HasMaxLength(32)
+                                .HasColumnType("character varying(32)");
+
+                            b1.Property<string>("Label")
+                                .IsRequired()
+                                .HasMaxLength(120)
+                                .HasColumnType("character varying(120)");
+
+                            b1.Property<Guid>("QuoteId")
+                                .HasColumnType("uuid");
+
+                            b1.HasKey("Id");
+
+                            b1.HasIndex("QuoteId");
+
+                            b1.ToTable("quote_lines", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("QuoteId");
+
+                            b1.OwnsOne("Atlas.Domain.Money", "Amount", b2 =>
+                                {
+                                    b2.Property<Guid>("QuoteLineId")
+                                        .HasColumnType("uuid");
+
+                                    b2.Property<decimal>("Amount")
+                                        .HasPrecision(18, 2)
+                                        .HasColumnType("numeric(18,2)");
+
+                                    b2.Property<string>("Currency")
+                                        .IsRequired()
+                                        .HasMaxLength(3)
+                                        .HasColumnType("character(3)")
+                                        .IsFixedLength();
+
+                                    b2.HasKey("QuoteLineId");
+
+                                    b2.ToTable("quote_lines");
+
+                                    b2.WithOwner()
+                                        .HasForeignKey("QuoteLineId");
+                                });
+
+                            b1.Navigation("Amount")
+                                .IsRequired();
+                        });
+
+                    b.Navigation("DisplayTotal")
+                        .IsRequired();
+
+                    b.Navigation("Gross")
+                        .IsRequired();
+
+                    b.Navigation("Lines");
+
+                    b.Navigation("TotalEmployerCost")
+                        .IsRequired();
                 });
 #pragma warning restore 612, 618
         }

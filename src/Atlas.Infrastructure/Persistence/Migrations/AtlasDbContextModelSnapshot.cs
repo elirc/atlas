@@ -257,6 +257,103 @@ namespace Atlas.Infrastructure.Persistence.Migrations
                     b.ToTable("engagements", (string)null);
                 });
 
+            modelBuilder.Entity("Atlas.Domain.Leave.LeavePolicy", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AccrualCadence")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<decimal>("AnnualEntitlementDays")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)");
+
+                    b.Property<decimal>("CarryoverCapDays")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)");
+
+                    b.Property<string>("Country")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character(3)")
+                        .IsFixedLength();
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OrgId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrgId", "Country")
+                        .IsUnique();
+
+                    b.ToTable("leave_policies", (string)null);
+                });
+
+            modelBuilder.Entity("Atlas.Domain.Leave.LeaveRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DecidedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DecidedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("From")
+                        .HasColumnType("date")
+                        .HasColumnName("FromDate");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("OrgId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("RequestedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTimeOffset?>("SubmittedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateOnly>("To")
+                        .HasColumnType("date")
+                        .HasColumnName("ToDate");
+
+                    b.Property<Guid>("WorkerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("WorkingDays")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WorkerId", "Status");
+
+                    b.HasIndex("OrgId", "CreatedAtUtc", "Id");
+
+                    b.ToTable("leave_requests", (string)null);
+                });
+
             modelBuilder.Entity("Atlas.Domain.Orgs.ClientOrg", b =>
                 {
                     b.Property<Guid>("Id")

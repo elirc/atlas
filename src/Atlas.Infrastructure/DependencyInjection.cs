@@ -48,6 +48,8 @@ public static class DependencyInjection
         services.AddScoped<IEngagementRepository, EngagementRepository>();
         services.AddScoped<IEventSink, Messaging.LoggingEventSink>();
         services.AddScoped<IQuoteReader, Adapters.QuoteReader>();
+        services.AddScoped<ILeavePolicyRepository, LeavePolicyRepository>();
+        services.AddScoped<ILeaveRequestRepository, LeaveRequestRepository>();
         services.AddScoped<IUnitOfWork, EfUnitOfWork>();
 
         // Stateless immutable cross-rate table — a singleton, like the crypto services.

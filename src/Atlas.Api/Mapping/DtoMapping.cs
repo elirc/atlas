@@ -1,6 +1,8 @@
+using Atlas.Application.Leave;
 using Atlas.Contracts.V1;
 using Atlas.Domain.Auditing;
 using Atlas.Domain.Countries;
+using Atlas.Domain.Leave;
 using Atlas.Domain.Orgs;
 using Atlas.Domain.Workforce;
 
@@ -31,4 +33,17 @@ internal static class DtoMapping
     public static AuditEntryDto ToDto(this AuditEntry entry) =>
         new(entry.Id, entry.Action, entry.SubjectType, entry.SubjectId,
             entry.ActorUserId, entry.DetailsJson, entry.AtUtc);
+
+    public static LeavePolicyDto ToDto(this LeavePolicy policy) =>
+        new(policy.Id, policy.Country.Value, policy.AnnualEntitlementDays,
+            policy.AccrualCadence.ToString(), policy.CarryoverCapDays, policy.CreatedAtUtc);
+
+    public static LeaveRequestDto ToDto(this LeaveRequest request) =>
+        new(request.Id, request.WorkerId, request.From, request.To, request.WorkingDays,
+            request.Status.ToString(), request.Note, request.RequestedByUserId,
+            request.DecidedByUserId, request.DecidedAtUtc, request.CreatedAtUtc);
+
+    public static LeaveBalanceDto ToDto(this LeaveBalanceView view) =>
+        new(view.WorkerId, view.Country, view.AsOf, view.AnnualEntitlementDays,
+            view.AccruedDays, view.SpentDays, view.AvailableDays);
 }

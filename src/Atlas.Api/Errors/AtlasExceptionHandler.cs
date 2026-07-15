@@ -17,12 +17,16 @@ public sealed class AtlasExceptionHandler(IProblemDetailsService problemDetails)
         Exception exception,
         CancellationToken cancellationToken)
     {
-        // LEARN: three failure families, three contracts —
+        // LEARN: the failure families and their contracts —
         //   404 not-found:            the resource isn't there (or you may not know)
         //   400 invalid-request:      the request itself is malformed
         //   422 domain-rule-violated: well-formed request, but the business said no
-        // Anything else is a genuine bug and stays a 500 (handled by the default
-        // pipeline; we deliberately do NOT catch it here).
+        //   401 / 403:                who you are / what you may do
+        //   503 vendor-unavailable:   a downstream we depend on is momentarily down — retry
+        // Anything else is a genuine bug and stays a 500 (handled by the default pipeline; we
+        // deliberately do NOT catch it here). UnmappedVendorStateException is intentionally in
+        // that "anything else" bucket — an unmapped vendor state is OUR bug, and it SHOULD be a
+        // loud 500 that pages someone, not a smoothed-over 4xx. (ADR-0010.)
         (int status, string type, string title) = exception switch
         {
             NotFoundException => (
@@ -45,6 +49,13 @@ public sealed class AtlasExceptionHandler(IProblemDetailsService problemDetails)
                 StatusCodes.Status403Forbidden,
                 AtlasProblems.Forbidden,
                 "Permission denied"),
+            // WHY a distinct 503 (not a 500): the request is fine and the business rules are
+            // satisfied — a downstream vendor is just momentarily unreachable. Telling the client
+            // "retry" (503) rather than "you broke something" (500 or 4xx) is the honest signal.
+            PaymentProviderUnavailableException => (
+                StatusCodes.Status503ServiceUnavailable,
+                AtlasProblems.VendorUnavailable,
+                "Payment provider unavailable"),
             _ => (0, string.Empty, string.Empty),
         };
 

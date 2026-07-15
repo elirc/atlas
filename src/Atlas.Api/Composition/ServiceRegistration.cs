@@ -77,6 +77,15 @@ public static class ServiceRegistration
         builder.Services.AddScoped<Application.Expenses.GetExpense>();
         builder.Services.AddScoped<Application.Expenses.ListExpenses>();
         builder.Services.AddScoped<Application.Approvals.ListPendingApprovals>();
+        builder.Services.AddScoped<Application.Contractors.CreateContractor>();
+        builder.Services.AddScoped<Application.Contractors.ListContractors>();
+        builder.Services.AddScoped<Application.Invoicing.SubmitInvoice>();
+        builder.Services.AddScoped<Application.Invoicing.HrApproveInvoice>();
+        builder.Services.AddScoped<Application.Invoicing.AdminApproveInvoice>();
+        builder.Services.AddScoped<Application.Invoicing.PayInvoice>();
+        builder.Services.AddScoped<Application.Invoicing.ReconcileInvoicePayment>();
+        builder.Services.AddScoped<Application.Invoicing.GetInvoice>();
+        builder.Services.AddScoped<Application.Invoicing.ListInvoices>();
 
         // The caller's identity: one RequestContext per request, exposed to the
         // Application layer as the ICurrentContext port.

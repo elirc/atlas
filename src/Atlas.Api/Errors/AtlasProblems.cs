@@ -13,4 +13,7 @@ public static class AtlasProblems
     public const string DomainRuleViolated = Base + "domain-rule-violated";
     public const string Unauthenticated = Base + "unauthenticated";
     public const string Forbidden = Base + "forbidden";
+
+    // S09: a downstream payment vendor is momentarily unreachable (503, retryable).
+    public const string VendorUnavailable = Base + "vendor-unavailable";
 }

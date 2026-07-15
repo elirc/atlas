@@ -15,7 +15,8 @@ jobs:
       - id: filter
         shell: bash
         run: |
-          if ls *.sln *.slnx >/dev/null 2>&1; then
+          # ls fails if ANY glob is unmatched, so probe each pattern separately.
+          if ls *.sln >/dev/null 2>&1 || ls *.slnx >/dev/null 2>&1; then
             echo "dotnet=true" >> "$GITHUB_OUTPUT"
           else
             echo "dotnet=false" >> "$GITHUB_OUTPUT"

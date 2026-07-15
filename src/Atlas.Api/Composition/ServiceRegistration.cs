@@ -52,6 +52,7 @@ public static class ServiceRegistration
         builder.Services.AddScoped<Application.Compliance.ListWorkerDocuments>();
         builder.Services.AddScoped<Application.Compliance.GetWorkerCompliance>();
         builder.Services.AddScoped<Application.Compliance.ListExpiringDocuments>();
+        builder.Services.AddAtlasReportUseCases();
         builder.Services.AddScoped<Application.Quotes.CreateQuote>();
         builder.Services.AddScoped<Application.Quotes.GetQuote>();
         builder.Services.AddScoped<Application.Quotes.ListQuotes>();

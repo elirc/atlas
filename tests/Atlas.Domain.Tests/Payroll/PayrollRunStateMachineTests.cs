@@ -9,7 +9,7 @@ public class PayrollRunStateMachineTests
     private static readonly DateTimeOffset T0 = new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
 
     private static PayrollRun DraftRun() =>
-        PayrollRun.Create(Guid.NewGuid(), Guid.NewGuid(), PayPeriod.ForMonth(2026, 3), Guid.NewGuid(), T0);
+        PayrollRun.Create(Guid.NewGuid(), Guid.NewGuid(), PayPeriod.ForMonth(2026, 3), Guid.NewGuid(), PayrollVendor.AtlasNative, T0);
 
     // ── The exhaustive matrix: every (state × transition), legal AND illegal ────────────
 

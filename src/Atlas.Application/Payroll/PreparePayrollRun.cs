@@ -13,20 +13,32 @@ namespace Atlas.Application.Payroll;
 public sealed record PreparedRun(PayrollRun Run, bool AlreadyExisted);
 
 /// <summary>
-/// Prepare a payroll run for a cycle's period: create the run and compute a payslip for
-/// EVERY active worker of the org in that country. Idempotent by natural key
-/// (PayCycleId, PeriodStart) — preparing the same period again returns the EXISTING run,
-/// untouched, and computes nothing new.
+/// Prepare a payroll run for a cycle's period: resolve the org+country's vendor, PIN it on the
+/// run, and compute a payslip for EVERY active worker of the org in that country through that
+/// vendor. Idempotent by natural key (PayCycleId, PeriodStart) — preparing the same period again
+/// returns the EXISTING run, untouched, and computes nothing new (nor re-resolves the vendor).
 /// </summary>
-// 📘 The composition ROOT'S root. This use case is where S03 (terms history), S04 (Money +
-// packs) and S06 (leave) are gathered and handed to the pure calculator, once per worker,
-// inside one unit of work: the run, all its payslips, all their lines, and the audit row
-// commit together or not at all.
+// 📘 The composition ROOT'S root — now with a vendor seam. This use case is where S03 (terms
+// history), S04 (Money + packs) and S06 (leave) are gathered and handed to a calculation VENDOR,
+// once per worker, inside one unit of work. S12's single change to the hot path: the pure
+// PayrollCalculator.Calculate(...) call became `await vendor.CalculateAsync(...)`, where `vendor`
+// is resolved from the run's pinned SelectedVendor. That is the entire blast radius of "we now
+// have two payroll engines" on this file — one resolution up front, one await in the loop. The
+// locality table in the PR measures exactly this.
+//
+// ⚠️ THE VENDOR IS PINNED HERE, AT CREATION (the cycle-in-flight rule). We resolve the vendor
+// once, as of the creation DAY, from the effective-dated assignment log, and hand it to
+// PayrollRun.Create — which stores it. Every payslip in this run is computed with that pinned
+// vendor. A mid-quarter switch effective tomorrow does not touch a run created today: it will be
+// picked up by the NEXT period's run. Resolving per-worker, or at execute time, is the bug this
+// avoids — it would let a flip rewrite an open cycle's engine under a reviewer's feet.
 public sealed class PreparePayrollRun(
     IPayCycleRepository cycles,
     IPayrollRunRepository runs,
     IWorkerRepository workers,
     IEmploymentRecordRepository records,
+    IVendorAssignmentRepository vendorAssignments,
+    IPayrollVendorDirectory vendorDirectory,
     IUnpaidLeaveCalendar leave,
     IAuditTrail audit,
     IUnitOfWork unitOfWork,
@@ -48,10 +60,10 @@ public sealed class PreparePayrollRun(
         PayPeriod period = cycle.PeriodFor(year, month);
 
         // IDEMPOTENT CREATION. (cycleId, periodStart) is the run's identity, so preparing
-        // "March" twice is the same run — return the existing one and write nothing. The
-        // unique index (PayCycleId, PeriodStart) is the real guarantee under a race; this
-        // query is the friendly, common-case path. Full idempotency-key handling for
-        // money-moving POSTs matures into middleware in S10.
+        // "March" twice is the same run — return the existing one and write nothing (and DO NOT
+        // re-resolve the vendor: the existing run's pin is authoritative). The unique index
+        // (PayCycleId, PeriodStart) is the real guarantee under a race; this query is the
+        // friendly, common-case path.
         PayrollRun? existing =
             await runs.FindByNaturalKeyAsync(cycle.Id, period.Start, cancellationToken);
         if (existing is not null)
@@ -60,8 +72,19 @@ public sealed class PreparePayrollRun(
         }
 
         DateTimeOffset now = clock.GetUtcNow();
-        var run = PayrollRun.Create(orgId, cycle.Id, period, context.UserId, now);
 
+        // ── Resolve the vendor ONCE, as of the creation day, and pin it (see the ⚠️ above) ──
+        // Every org starts on AtlasNative and stays there until an effective-dated assignment
+        // says otherwise; an org that never touched vendor selection loads an empty history and
+        // resolves to the fallback — a single cheap read on the common path.
+        IReadOnlyList<VendorAssignment> assignments =
+            await vendorAssignments.ListForOrgCountryAsync(orgId, cycle.Country, cancellationToken);
+        PayrollVendor vendor = VendorSelection.Resolve(
+            assignments, DateOnly.FromDateTime(now.UtcDateTime), fallback: PayrollVendor.AtlasNative);
+
+        var run = PayrollRun.Create(orgId, cycle.Id, period, context.UserId, vendor, now);
+
+        IPayrollCalculationVendor calculator = vendorDirectory.Resolve(vendor);
         ICountryRulePack pack = CountryRulePacks.For(cycle.Country);
 
         // "Active" = hired on or before the period end (see IWorkerRepository). When S05's
@@ -87,8 +110,8 @@ public sealed class PreparePayrollRun(
             int unpaidDays = await leave.ApprovedUnpaidDaysAsync(
                 worker.Id, period.Start, period.End, cancellationToken);
 
-            PayslipCalculation calculation = PayrollCalculator.Calculate(
-                new PayrollCalculationInput(history, pack, period, unpaidDays));
+            PayslipCalculation calculation = await calculator.CalculateAsync(
+                new PayrollCalculationInput(history, pack, period, unpaidDays), cancellationToken);
 
             run.AddPayslip(Payslip.FromCalculation(
                 run.Id, worker.Id, orgId, period, calculation, now));
@@ -102,6 +125,7 @@ public sealed class PreparePayrollRun(
                 Country = cycle.Country.Value,
                 PeriodStart = period.Start,
                 PeriodEnd = period.End,
+                Vendor = vendor.ToString(),
                 PayslipCount = run.Payslips.Count,
             }),
             now));

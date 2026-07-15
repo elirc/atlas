@@ -23,6 +23,21 @@ public sealed class PayrollRun
 
     public PayrollRunState State { get; private set; }
 
+    /// <summary>
+    /// The vendor this run's payslips were computed with — PINNED at creation and never
+    /// re-resolved. This one field is the cycle-in-flight rule made durable (S12, ADR-0014).
+    /// </summary>
+    // ⚠️ PIN AT CREATION, NOT EXECUTION — the whole point of storing the vendor on the run.
+    // A run resolves its vendor ONCE, the day it is prepared (PreparePayrollRun consults the
+    // effective-dated VendorAssignment log as of that day and hands the answer to Create).
+    // From then on the run carries its own vendor. If the org flips DEU to LedgerPay while
+    // this run sits in review, the flip changes the NEXT period's run — this one still
+    // executes on the vendor that computed the numbers a reviewer approved. Re-resolving at
+    // execution would let a mid-quarter switch silently swap the engine under an open cycle,
+    // producing an executed payslip whose numbers no one ever reviewed. The field refuses
+    // that: the receipt records who did the maths.
+    public PayrollVendor SelectedVendor { get; }
+
     public Guid CreatedByUserId { get; }
     public DateTimeOffset CreatedAtUtc { get; }
 
@@ -37,6 +52,7 @@ public sealed class PayrollRun
         Guid payCycleId,
         PayPeriod period,
         Guid createdByUserId,
+        PayrollVendor selectedVendor,
         DateTimeOffset createdAtUtc)
     {
         Id = id;
@@ -45,16 +61,19 @@ public sealed class PayrollRun
         PeriodStart = period.Start;
         PeriodEnd = period.End;
         State = PayrollRunState.Draft;
+        SelectedVendor = selectedVendor;
         CreatedByUserId = createdByUserId;
         CreatedAtUtc = createdAtUtc;
     }
 
-    /// <summary>Open a new run in <see cref="PayrollRunState.Draft"/>, with no payslips yet.</summary>
+    /// <summary>Open a new run in <see cref="PayrollRunState.Draft"/>, with no payslips yet,
+    /// pinned to the vendor resolved for this org+country as of creation day.</summary>
     public static PayrollRun Create(
         Guid orgId,
         Guid payCycleId,
         PayPeriod period,
         Guid createdByUserId,
+        PayrollVendor selectedVendor,
         DateTimeOffset createdAtUtc)
     {
         if (orgId == Guid.Empty)
@@ -67,7 +86,8 @@ public sealed class PayrollRun
             throw new DomainRuleException("A payroll run must belong to a pay cycle.");
         }
 
-        return new PayrollRun(Guid.NewGuid(), orgId, payCycleId, period, createdByUserId, createdAtUtc);
+        return new PayrollRun(
+            Guid.NewGuid(), orgId, payCycleId, period, createdByUserId, selectedVendor, createdAtUtc);
     }
 
     /// <summary>Attach a computed payslip. Only while Draft — an executed run is frozen.</summary>
@@ -129,8 +149,8 @@ public sealed class PayrollRun
     private Money? FoldPayslips(Func<Payslip, Money> selector) =>
         _payslips.Count == 0 ? null : _payslips.Select(selector).Aggregate((a, b) => a + b);
 
-    // WHY: EF Core materialization only. _payslips is initialised at its field; State is a
-    // value type EF sets via the property's private setter.
+    // WHY: EF Core materialization only. _payslips is initialised at its field; State and
+    // SelectedVendor are value types EF sets via the property's backing on materialization.
     private PayrollRun()
     {
     }

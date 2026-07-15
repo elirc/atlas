@@ -79,6 +79,25 @@ public static class DependencyInjection
         services.AddSingleton(Vendors.PayGrid.PayGridSettings.Default);
         services.AddSingleton<Vendors.PayGrid.PayGridClient>();
         services.AddScoped<IPaymentProvider, Vendors.PayGrid.PayGridPaymentProvider>();
+
+        // ── S12 — payroll CALCULATION vendors: the port extraction + LedgerPay ACL (ADR-0014) ──────
+        // Two IPayrollCalculationVendor adapters, indexed by a directory. AtlasNative wraps the pure
+        // engine (behaviour-identical to S07); LedgerPay speaks its own dialect behind its ACL,
+        // exactly the way PayGrid does for payments. Nothing above IPayrollCalculationVendor learns
+        // which vendor a run used — the invoice-style blast-radius promise, kept for payroll.
+        services.AddSingleton(Vendors.LedgerPay.LedgerPaySettings.Default);
+        services.AddSingleton<Vendors.LedgerPay.LedgerPayClient>();
+        services.AddScoped<IPayrollCalculationVendor, Vendors.AtlasNative.AtlasNativeCalculator>();
+        services.AddScoped<IPayrollCalculationVendor, Vendors.LedgerPay.LedgerPayCalculator>();
+        services.AddScoped<IPayrollVendorDirectory, Vendors.PayrollVendorDirectory>();
+        // Effective-dated vendor selection + the shadow-run comparison store.
+        services.AddScoped<IVendorAssignmentRepository, VendorAssignmentRepository>();
+        services.AddScoped<IVendorComparisonReportRepository, VendorComparisonReportRepository>();
+        // Shadow-run GATE: allowlist + time-box. Default = no org enrolled (shadow mode OFF) — a real
+        // deployment binds ShadowRunSettings from configuration to enrol a client for a bounded window.
+        services.AddSingleton(Shadow.ShadowRunSettings.Default);
+        services.AddScoped<IShadowRunPolicy, Shadow.ConfiguredShadowRunPolicy>();
+
         // WHY: IEventSink is already registered (S05, Messaging.LoggingEventSink) — payroll
         // reuses that seam. Only the payroll-specific unpaid-leave stand-in is new here.
         services.AddScoped<IUnpaidLeaveCalendar, Payroll.NoUnpaidLeaveCalendar>();

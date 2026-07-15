@@ -1,6 +1,7 @@
 using Atlas.Application.Abstractions;
 using Atlas.Application.Pagination;
 using Atlas.Domain.Auditing;
+using Atlas.Domain.Countries;
 using Atlas.Domain.Workforce;
 
 namespace Atlas.Application.Tests.Fakes;
@@ -40,6 +41,17 @@ public sealed class InMemoryWorkerRepository : IWorkerRepository
         IReadOnlyList<Worker> page = [.. ordered.Take(fetch)];
         return Task.FromResult(page);
     }
+
+    // S07 addition: active workers of one org in one country as of a date.
+    public Task<IReadOnlyList<Worker>> ListActiveInCountryAsync(
+        Guid orgId, CountryCode country, DateOnly asOf, CancellationToken ct) =>
+        Task.FromResult<IReadOnlyList<Worker>>(
+        [
+            .. Rows
+                .Where(w => w.OrgId == orgId && w.Country == country && w.HiredOn <= asOf)
+                .OrderBy(w => w.CreatedAtUtc)
+                .ThenBy(w => w.Id)
+        ]);
 }
 
 public sealed class InMemoryEmploymentRecordRepository : IEmploymentRecordRepository

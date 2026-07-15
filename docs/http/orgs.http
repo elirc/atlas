@@ -1,0 +1,46 @@
+# Atlas — countries & client orgs (Sprint 01)
+# Run against: dotnet run --project src/Atlas.Api  (defaults to http://localhost:5000)
+# VS Code REST Client / JetBrains HTTP client compatible.
+
+@host = http://localhost:5000
+
+### List countries (seeded reference data)
+GET {{host}}/api/v1/countries
+
+### Get one country (codes are case-insensitive)
+GET {{host}}/api/v1/countries/deu
+
+### Unknown country → 404 problem+json
+GET {{host}}/api/v1/countries/FRA
+
+### Malformed country code → 422 problem+json (domain-rule-violated)
+GET {{host}}/api/v1/countries/FRANCE
+
+### Create a client org → 201 + Location
+POST {{host}}/api/v1/client-orgs
+Content-Type: application/json
+
+{
+  "name": "Initech GmbH"
+}
+
+### Blank name → 422 problem+json
+POST {{host}}/api/v1/client-orgs
+Content-Type: application/json
+
+{
+  "name": "   "
+}
+
+### List client orgs (newest first, cursor pagination)
+# Follow the X-Next-Cursor RESPONSE HEADER for the next page.
+GET {{host}}/api/v1/client-orgs?limit=2
+
+### Next page (paste the X-Next-Cursor value)
+GET {{host}}/api/v1/client-orgs?limit=2&cursor=PASTE_CURSOR_HERE
+
+### Out-of-range limit → 400 problem+json (rejected, not clamped)
+GET {{host}}/api/v1/client-orgs?limit=0
+
+### The OpenAPI document (drift-gated in CI)
+GET {{host}}/openapi/v1.json

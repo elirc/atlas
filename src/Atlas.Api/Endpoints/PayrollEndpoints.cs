@@ -122,8 +122,18 @@ public static class PayrollEndpoints
     private static void MapPayslips(RouteGroupBuilder group)
     {
         group.MapGet("/{id:guid}", async (
-            Guid id, GetPayslip useCase, CancellationToken ct) =>
-            Results.Ok((await useCase.ExecuteAsync(id, ct)).ToDto()))
+            Guid id, HttpResponse response, GetPayslip useCase, CancellationToken ct) =>
+        {
+            Payslip payslip = await useCase.ExecuteAsync(id, ct);
+
+            // S12: v1 payslips are DEPRECATED in favour of /api/v2/payslips (line-grouping change).
+            // Announce it in-band on every read — Deprecation + Sunset + a successor Link — so a
+            // client learns to migrate, by when, and to what, without reading a changelog (ADR-0015).
+            // The BODY is unchanged (byte-for-byte, proven by PayslipVersioningTests); only headers add.
+            ApiDeprecation.StampPayslipV1(response, payslip.Id);
+
+            return Results.Ok(payslip.ToDto());
+        })
         .Produces<PayslipDto>()
         .ProducesProblem(StatusCodes.Status404NotFound);
     }

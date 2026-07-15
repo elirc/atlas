@@ -1,4 +1,7 @@
+using Atlas.Api.Auth;
 using Atlas.Api.Errors;
+using Atlas.Application.Abstractions;
+using Atlas.Application.Auth;
 using Atlas.Application.Countries;
 using Atlas.Application.Orgs;
 using Atlas.Infrastructure;
@@ -28,6 +31,15 @@ public static class ServiceRegistration
         builder.Services.AddScoped<CreateClientOrg>();
         builder.Services.AddScoped<GetClientOrg>();
         builder.Services.AddScoped<ListClientOrgs>();
+        builder.Services.AddScoped<RegisterOrg>();
+        builder.Services.AddScoped<Login>();
+        builder.Services.AddScoped<Logout>();
+        builder.Services.AddScoped<GetMe>();
+
+        // The caller's identity: one RequestContext per request, exposed to the
+        // Application layer as the ICurrentContext port.
+        builder.Services.AddScoped<RequestContext>();
+        builder.Services.AddScoped<ICurrentContext>(sp => sp.GetRequiredService<RequestContext>());
 
         // Errors → RFC 7807, one translation table for the whole API.
         builder.Services.AddProblemDetails();

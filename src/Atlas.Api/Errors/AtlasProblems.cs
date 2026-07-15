@@ -11,4 +11,6 @@ public static class AtlasProblems
     public const string NotFound = Base + "not-found";
     public const string InvalidRequest = Base + "invalid-request";
     public const string DomainRuleViolated = Base + "domain-rule-violated";
+    public const string Unauthenticated = Base + "unauthenticated";
+    public const string Forbidden = Base + "forbidden";
 }

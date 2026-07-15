@@ -257,6 +257,71 @@ namespace Atlas.Infrastructure.Persistence.Migrations
                     b.ToTable("engagements", (string)null);
                 });
 
+            modelBuilder.Entity("Atlas.Domain.Expenses.ExpenseClaim", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Approval")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("Status");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DecidedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DecidedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DecisionReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("OrgId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ReceiptFilename")
+                        .HasMaxLength(260)
+                        .HasColumnType("character varying(260)");
+
+                    b.Property<string>("ReceiptUrl")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
+
+                    b.Property<DateTimeOffset?>("ReimbursedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("RequestedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("SubmittedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("WorkerId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrgId", "Approval");
+
+                    b.HasIndex("OrgId", "CreatedAtUtc", "Id");
+
+                    b.ToTable("expense_claims", (string)null);
+                });
+
             modelBuilder.Entity("Atlas.Domain.Leave.LeavePolicy", b =>
                 {
                     b.Property<Guid>("Id")
@@ -637,6 +702,37 @@ namespace Atlas.Infrastructure.Persistence.Migrations
                         });
 
                     b.Navigation("Checklist");
+                });
+
+            modelBuilder.Entity("Atlas.Domain.Expenses.ExpenseClaim", b =>
+                {
+                    b.OwnsOne("Atlas.Domain.Money", "Amount", b1 =>
+                        {
+                            b1.Property<Guid>("ExpenseClaimId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<decimal>("Amount")
+                                .HasPrecision(14, 2)
+                                .HasColumnType("numeric(14,2)")
+                                .HasColumnName("amount");
+
+                            b1.Property<string>("Currency")
+                                .IsRequired()
+                                .HasMaxLength(3)
+                                .HasColumnType("character(3)")
+                                .HasColumnName("currency")
+                                .IsFixedLength();
+
+                            b1.HasKey("ExpenseClaimId");
+
+                            b1.ToTable("expense_claims");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ExpenseClaimId");
+                        });
+
+                    b.Navigation("Amount")
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Atlas.Domain.Payroll.Payslip", b =>

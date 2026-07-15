@@ -5,6 +5,8 @@ using Atlas.Domain.Leave;
 
 namespace Atlas.Application.Tests.Fakes;
 
+// INTEGRATOR NOTE (S08): the ONLY change from S06 is the added ListPendingForOrgAsync on
+// InMemoryLeaveRequestRepository. Everything else is verbatim S06.
 public sealed class InMemoryLeavePolicyRepository : ILeavePolicyRepository
 {
     public List<LeavePolicy> Rows { get; } = [];
@@ -56,5 +58,20 @@ public sealed class InMemoryLeaveRequestRepository : ILeaveRequestRepository
 
         IReadOnlyList<LeaveRequest> page = [.. ordered.Take(fetch)];
         return Task.FromResult(page);
+    }
+
+    // S08: the leave feed for the cross-type approval inbox.
+    public Task<IReadOnlyList<LeaveRequest>> ListPendingForOrgAsync(
+        Guid orgId, int fetch, CancellationToken ct)
+    {
+        IReadOnlyList<LeaveRequest> pending =
+        [
+            .. Rows
+                .Where(r => r.OrgId == orgId && r.Status == LeaveRequestStatus.Submitted)
+                .OrderByDescending(r => r.SubmittedAtUtc)
+                .ThenByDescending(r => r.Id)
+                .Take(fetch)
+        ];
+        return Task.FromResult(pending);
     }
 }

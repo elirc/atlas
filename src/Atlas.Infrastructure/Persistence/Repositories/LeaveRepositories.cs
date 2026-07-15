@@ -6,6 +6,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Atlas.Infrastructure.Persistence.Repositories;
 
+// INTEGRATOR NOTE (S08): the ONLY change from S06 is the new ListPendingForOrgAsync on
+// LeaveRequestRepository (the leave feed for the approval inbox). LeavePolicyRepository is
+// verbatim S06. See meta/NOTES.md.
 internal sealed class LeavePolicyRepository(AtlasDbContext db) : ILeavePolicyRepository
 {
     public async Task AddAsync(LeavePolicy policy, CancellationToken ct) =>
@@ -54,4 +57,14 @@ internal sealed class LeaveRequestRepository(AtlasDbContext db) : ILeaveRequestR
 
         return await query.Take(fetch).ToListAsync(ct);
     }
+
+    // S08: the leave feed for the cross-type approval inbox — submitted requests, newest first.
+    public async Task<IReadOnlyList<LeaveRequest>> ListPendingForOrgAsync(
+        Guid orgId, int fetch, CancellationToken ct) =>
+        await db.Set<LeaveRequest>().AsNoTracking()
+            .Where(r => r.OrgId == orgId && r.Status == LeaveRequestStatus.Submitted)
+            .OrderByDescending(r => r.SubmittedAtUtc)
+            .ThenByDescending(r => r.Id)
+            .Take(fetch)
+            .ToListAsync(ct);
 }

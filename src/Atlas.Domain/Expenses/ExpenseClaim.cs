@@ -1,8 +1,12 @@
+using Atlas.Domain.Approvals;
+
 namespace Atlas.Domain.Expenses;
 
 /// <summary>Where an expense claim sits — the shared approval states plus an expense-only tail.</summary>
 // WHY a SIXTH state (Reimbursed) leave never had: an approved expense still owes the worker money,
-// so "approved" and "paid back" are different facts. Reimbursement is expense-specific.
+// so "approved" and "paid back" are different facts. Reimbursement is deliberately NOT part of the
+// shared ApprovalWorkflow (see its YAGNI ledger) — it is an expense-specific step layered on top.
+// Values 1..5 line up with ApprovalState so the cast at the boundary is total; 6 is ours alone.
 public enum ExpenseClaimStatus
 {
     Draft = 1,
@@ -17,15 +21,14 @@ public enum ExpenseClaimStatus
 /// A worker's claim to be paid back for money they spent: an amount (<see cref="Money"/>), a
 /// category, and receipt METADATA (a url + filename — Atlas stores no binary this sprint). The
 /// approval lifecycle — draft → submitted → approved/denied, cancellable from submitted or
-/// approved — plus an expense-only reimbursed tail.
+/// approved — is guarded by the shared <see cref="ApprovalWorkflow{T}"/>; reimbursement
+/// (approved → reimbursed) is expense-specific and guarded here.
 /// </summary>
-// 🔗 The SECOND consumer of "approval". S06's LeaveRequest was the first, and it refused to
-// generalise from a sample size of one. This aggregate is deliberately born as a COPY-PASTE of
-// LeaveRequest's guard shape — RequireStatus/Describe inlined below, verbatim from leave with the
-// noun changed — precisely so the extraction (a later commit) has TWO real examples to factor the
-// right seams from, instead of one example and a guess. The differences (an amount, a receipt, a
-// sixth Reimbursed state, a denial reason) are the point: a one-example abstraction would not have
-// predicted them. See docs/concepts/rule-of-three.md.
+// 🔗 This aggregate is the SECOND consumer of approval. It was born (S08 commit 1) as a
+// deliberate copy-paste of S06's LeaveRequest shape — inline guards and all — precisely so that
+// the extraction (commit 4) had two real examples to factor, not one example and a guess. Its
+// approval transitions now delegate to ApprovalWorkflow<ExpenseApprovalSubject>; the SAME
+// characterization tests that pinned the copy-pasted version still pass. See ADR-0009.
 public sealed class ExpenseClaim
 {
     public const int MaxNoteLength = 500;
@@ -41,16 +44,16 @@ public sealed class ExpenseClaim
 
     public ExpenseCategory Category { get; }
 
-    // WHY metadata only: receipts as uploaded FILES (blob storage, virus scanning, signed URLs) are
-    // a whole subsystem, explicitly out of scope this sprint (ADR-0009).
+    // WHY metadata only: receipts as uploaded FILES (blob storage, virus scanning, signed URLs)
+    // are a whole subsystem and explicitly out of scope this sprint (ADR-0009). A claim records
+    // WHERE a receipt lives and what it is called; putting the bytes somewhere is a later problem.
     public string? ReceiptUrl { get; }
     public string? ReceiptFilename { get; }
 
     public string? Note { get; }
 
-    /// <summary>The claim's status. Stored directly for now — the extraction will move the
-    /// Draft…Cancelled portion into a shared ApprovalState.</summary>
-    public ExpenseClaimStatus Status { get; private set; }
+    /// <summary>The SHARED approval sub-state (Draft…Cancelled). Reimbursed is tracked separately.</summary>
+    public ApprovalState Approval { get; private set; }
 
     public DateTimeOffset? SubmittedAtUtc { get; private set; }
     public Guid? DecidedByUserId { get; private set; }
@@ -62,6 +65,14 @@ public sealed class ExpenseClaim
 
     public Guid RequestedByUserId { get; }
     public DateTimeOffset CreatedAtUtc { get; }
+
+    /// <summary>
+    /// The consumer-facing status: the shared <see cref="Approval"/> state, except a reimbursed
+    /// claim reports <see cref="ExpenseClaimStatus.Reimbursed"/>. Computed, so it is declared
+    /// unmapped in ModelMappingTests — the stored truth is <see cref="Approval"/> + <see cref="ReimbursedAtUtc"/>.
+    /// </summary>
+    public ExpenseClaimStatus Status =>
+        ReimbursedAtUtc is not null ? ExpenseClaimStatus.Reimbursed : (ExpenseClaimStatus)Approval;
 
     private ExpenseClaim(
         Guid id,
@@ -83,7 +94,7 @@ public sealed class ExpenseClaim
         ReceiptUrl = receiptUrl;
         ReceiptFilename = receiptFilename;
         Note = note;
-        Status = ExpenseClaimStatus.Draft;
+        Approval = ApprovalState.Draft;
         RequestedByUserId = requestedByUserId;
         CreatedAtUtc = createdAtUtc;
     }
@@ -123,39 +134,48 @@ public sealed class ExpenseClaim
             requestedByUserId, createdAtUtc);
     }
 
+    // The approval transitions delegate to the SHARED guard (same wording leave uses, with
+    // "expense claim" as the noun). Reimburse does not — it is ours.
     public void Submit(DateTimeOffset atUtc)
     {
-        RequireStatus(ExpenseClaimStatus.Draft, "submitted");
-        Status = ExpenseClaimStatus.Submitted;
+        ApprovalWorkflow<ExpenseApprovalSubject>.EnsureCanSubmit(Approval);
+        Approval = ApprovalState.Submitted;
         SubmittedAtUtc = atUtc;
     }
 
     public void Approve(Guid decidedByUserId, DateTimeOffset atUtc, string? reason = null)
     {
-        RequireStatus(ExpenseClaimStatus.Submitted, "approved");
-        Status = ExpenseClaimStatus.Approved;
+        ApprovalWorkflow<ExpenseApprovalSubject>.EnsureCanApprove(Approval);
+        Approval = ApprovalState.Approved;
         RecordDecision(decidedByUserId, atUtc, reason);
     }
 
     public void Deny(Guid decidedByUserId, DateTimeOffset atUtc, string? reason = null)
     {
-        RequireStatus(ExpenseClaimStatus.Submitted, "denied");
-        Status = ExpenseClaimStatus.Denied;
+        ApprovalWorkflow<ExpenseApprovalSubject>.EnsureCanDeny(Approval);
+        Approval = ApprovalState.Denied;
         RecordDecision(decidedByUserId, atUtc, reason);
     }
 
     public void Cancel()
     {
-        if (Status is ExpenseClaimStatus.Reimbursed
-            or not (ExpenseClaimStatus.Submitted or ExpenseClaimStatus.Approved))
+        // GOTCHA: a reimbursed claim's Approval is still `Approved`, which the shared guard would
+        // happily cancel. Reimbursement is terminal for OUR purposes, so we refuse here BEFORE
+        // asking the shared guard — the extra terminal rule that is ours, not the workflow's.
+        if (ReimbursedAtUtc is not null)
         {
             throw new DomainRuleException(
                 $"A {Describe(Status)} expense claim cannot be cancelled.");
         }
 
-        Status = ExpenseClaimStatus.Cancelled;
+        ApprovalWorkflow<ExpenseApprovalSubject>.EnsureCanCancel(Approval);
+        Approval = ApprovalState.Cancelled;
     }
 
+    /// <summary>Approved → Reimbursed. The expense-only tail the shared workflow does not model.</summary>
+    // WHY the USE CASE for this ships later: reimbursement MOVES MONEY, so it belongs with the
+    // payment provider (S09) and the idempotency middleware (S10). The domain state exists now so
+    // the shape is complete and tested; no endpoint reaches it this sprint (ADR-0009 scope note).
     public void Reimburse(DateTimeOffset atUtc)
     {
         if (Status != ExpenseClaimStatus.Approved)
@@ -164,24 +184,15 @@ public sealed class ExpenseClaim
                 $"Only an approved expense claim can be reimbursed (this one is {Describe(Status)}).");
         }
 
-        Status = ExpenseClaimStatus.Reimbursed;
         ReimbursedAtUtc = atUtc;
     }
 
-    // ↓↓↓ COPIED VERBATIM FROM LeaveRequest, s/leave request/expense claim/ — the duplication the
-    //     extraction will delete once ApprovalWorkflow<T> exists to own it. Two examples of THIS
-    //     block, side by side, are what let the extraction factor the right seams.
-    private void RequireStatus(ExpenseClaimStatus expected, string verb)
-    {
-        if (Status != expected)
-        {
-            throw new DomainRuleException(
-                $"Only a {Describe(expected)} expense claim can be {verb} " +
-                $"(this one is {Describe(Status)}).");
-        }
-    }
-
-    private static string Describe(ExpenseClaimStatus status) => status.ToString().ToLowerInvariant();
+    /// <summary>The decision as a shared record, or null while still pending. A method, not a
+    /// property, so ModelMappingTests does not try to map it.</summary>
+    public ApprovalDecision? Decision() =>
+        DecidedByUserId is { } decider
+            ? new ApprovalDecision(decider, DecidedAtUtc!.Value, DecisionReason)
+            : null;
 
     private void RecordDecision(Guid decidedByUserId, DateTimeOffset atUtc, string? reason)
     {
@@ -206,7 +217,10 @@ public sealed class ExpenseClaim
         return trimmed;
     }
 
-    // WHY: EF Core materialization only.
+    private static string Describe(ExpenseClaimStatus status) => status.ToString().ToLowerInvariant();
+
+    // WHY: EF Core materialization only. Owned Amount is populated by EF; Approval is a value
+    // type set through its private setter.
     private ExpenseClaim()
     {
         Amount = null!;

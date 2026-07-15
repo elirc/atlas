@@ -40,4 +40,5 @@ placements, planted debates, and post-merge steps.
 - **Approval** (S6 → S8 → S9) — an abstraction extracted on the second use, not predicted.
 - **Events leaving the system** (S5 → S9 → S10) — activity rows → notifications → transactional outbox.
 - **Rule packs** (S4 → S11 → S12) — data → plugins → the pivot exam.
-- **The flaw ledger** — revealed in S15 at `flaw-ledger.md`; until then it does not exist. 😉
+- **The flaw ledger** — now revealed at [flaw-ledger.md](flaw-ledger.md): five flaws were planted in
+  early sprints and harvested later with RED→GREEN arcs (#2 S06, #3 & #4 S10, #1 & #5 S13). 😉

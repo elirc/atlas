@@ -113,6 +113,9 @@ public static class DependencyInjection
         // S13 — login rate limiting (AF-6). Singleton: the failure counters ARE process state.
         services.AddSingleton<ILoginThrottle, Security.InMemoryLoginThrottle>();
 
+        // S14 — reporting read models + reference-data cache (IReportQueries, cached ISupportedCountries).
+        services.AddAtlasReporting();
+
         return services;
     }
 

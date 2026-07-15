@@ -22,6 +22,8 @@ RouteGroupBuilder api = app.MapGroup("/api/v1");
 api.MapCountries();
 api.MapClientOrgs();
 api.MapAuth();
+api.MapWorkers();
+api.MapAuditLog();
 
 // `dotnet run -- migrate seed` performs database chores and exits.
 if (await StartupTasks.HandleDatabaseCommandsAsync(app, args))

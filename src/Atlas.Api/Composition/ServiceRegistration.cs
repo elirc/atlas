@@ -35,6 +35,12 @@ public static class ServiceRegistration
         builder.Services.AddScoped<Login>();
         builder.Services.AddScoped<Logout>();
         builder.Services.AddScoped<GetMe>();
+        builder.Services.AddScoped<Application.Workforce.HireWorker>();
+        builder.Services.AddScoped<Application.Workforce.GetWorker>();
+        builder.Services.AddScoped<Application.Workforce.GetWorkerTerms>();
+        builder.Services.AddScoped<Application.Workforce.UpdateEmploymentTerms>();
+        builder.Services.AddScoped<Application.Workforce.ListWorkers>();
+        builder.Services.AddScoped<Application.Auditing.ListAuditLog>();
 
         // The caller's identity: one RequestContext per request, exposed to the
         // Application layer as the ICurrentContext port.

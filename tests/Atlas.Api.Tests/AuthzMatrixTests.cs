@@ -115,6 +115,44 @@ public class AuthzMatrixTests : IClassFixture<AtlasApiFactory>, IAsyncLifetime
             (await As(null).GetAsync($"/api/v1/client-orgs/{_orgAId}")).StatusCode);
     }
 
+    // ── Sprint 03 rows: workers & audit log ─────────────────────────────────
+
+    [Theory]
+    [InlineData(null, HttpStatusCode.Unauthorized)]
+    [InlineData("orgAdmin", HttpStatusCode.OK)]
+    public async Task Worker_list_requires_an_org_member(string? persona, HttpStatusCode expected)
+    {
+        HttpClient client = As(TokenFor(persona));
+
+        Assert.Equal(expected, (await client.GetAsync("/api/v1/workers")).StatusCode);
+    }
+
+    [Theory]
+    [InlineData(null, HttpStatusCode.Unauthorized)]
+    [InlineData("orgAdmin", HttpStatusCode.Created)]
+    public async Task Hiring_requires_hr_or_admin(string? persona, HttpStatusCode expected)
+    {
+        HttpClient client = As(TokenFor(persona));
+
+        HttpResponseMessage response = await client.PostAsJsonAsync(
+            "/api/v1/workers",
+            new Atlas.Contracts.V1.HireWorkerRequest(
+                "Matrix Worker", "mw@example.com", "USA",
+                new DateOnly(2026, 8, 1), "Analyst", 50_000m, 40));
+
+        Assert.Equal(expected, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(null, HttpStatusCode.Unauthorized)]
+    [InlineData("orgAdmin", HttpStatusCode.OK)]
+    public async Task Audit_log_requires_hr_or_admin(string? persona, HttpStatusCode expected)
+    {
+        HttpClient client = As(TokenFor(persona));
+
+        Assert.Equal(expected, (await client.GetAsync("/api/v1/audit-log")).StatusCode);
+    }
+
     private string? TokenFor(string? persona) => persona switch
     {
         null => null,

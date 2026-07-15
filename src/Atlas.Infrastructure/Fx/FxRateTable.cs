@@ -24,10 +24,6 @@ internal sealed class FxRateTable : IFxRates
             ["PHP"] = 0.0179m,
         };
 
-    // Below this amount we take a faster path (see Convert). Small line items dominate a
-    // typical batch, so the hot path is worth trimming.
-    private const decimal FastPathThreshold = 1_000m;
-
     public Money Convert(Money amount, CurrencyCode target)
     {
         if (amount.Currency == target)
@@ -44,16 +40,22 @@ internal sealed class FxRateTable : IFxRates
         decimal usdFrom = RateFor(amount.Currency);
         decimal usdTarget = RateFor(target);
 
-        if (Math.Abs(amount.Amount) < FastPathThreshold)
-        {
-            // Fast path for small amounts: do the whole cross in double and skip decimal
-            // division, which is the slow part on this path. The result is rounded to the
-            // minor unit before it leaves, same as the exact path.
-            double converted = (double)amount.Amount * (double)usdFrom / (double)usdTarget;
-            return Money.Of((decimal)converted, target).Rounded();
-        }
-
-        // Exact path for larger amounts.
+        // 📘 [Author] S13 audit finding AF-7 (harvest of ledger #1, planted S04 in commit
+        // d232b1c). This method used to carry a "fast path" that, for amounts under 1,000,
+        // did the cross in `double`: `(double)amount * (double)usdFrom / (double)usdTarget`.
+        // The claim on the tin was "skip the slow decimal division on the hot path." The
+        // claim was never benchmarked, and it was wrong twice over:
+        //   1. `decimal` division is not the bottleneck on any workload Atlas has, and
+        //   2. `double` is base-2; money is base-10. A `double` cross of a base-10 amount
+        //      lands a hair off the exact value, and near a half-cent boundary that hair
+        //      rounds to the WRONG cent. The exposing property test converts adversarial
+        //      decimals item-by-item and shows the double path drifting from the exact
+        //      decimal cross — a drift that ACCUMULATES across a payroll-scale batch.
+        // The fix is a deletion: there is one path now, and it is exact. `decimal`, never
+        // `double`, for money — the same rule Money itself enforces (see Money's 📘).
+        // ⚠️ The lesson worth keeping: a performance claim with no benchmark is a
+        // correctness risk wearing a speed costume. We removed an "optimization" that
+        // bought nothing and cost cents. See docs/security/sprint-13-audit.md#af-7.
         decimal exact = amount.Amount * usdFrom / usdTarget;
         return Money.Of(exact, target).Rounded();
     }

@@ -55,6 +55,8 @@ public static class DependencyInjection
         services.AddScoped<IEventDelivery, Outbox.LoggingEventDelivery>();
         services.AddScoped<IEventDelivery, Webhooks.WebhookEventDelivery>();
         services.AddScoped<Outbox.OutboxRelay>();
+        // S15 — the readiness probe reports DB connectivity + outbox depth/lag for /health/ready.
+        services.AddScoped<IReadinessProbe, Operations.AtlasReadinessProbe>();
         // S10 — idempotency store for the Idempotency-Key middleware (harvests the double-pay flaw).
         services.AddScoped<IIdempotencyStore, Idempotency.EfIdempotencyStore>();
         // S10 — webhooks: subscriptions + delivery log + the HTTP transport (a named HttpClient).
@@ -115,6 +117,9 @@ public static class DependencyInjection
 
         // S14 — reporting read models + reference-data cache (IReportQueries, cached ISupportedCountries).
         services.AddAtlasReporting();
+
+        // S15 — structured metrics as log lines (a port; a real exporter slots in without touching callers).
+        services.AddSingleton<IMetrics, Observability.LoggingMetrics>();
 
         return services;
     }

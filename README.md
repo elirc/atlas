@@ -81,7 +81,10 @@ PR** in order — stakeholder issue → commits one by one → inline review com
 thread → exercises. The playbooks in `docs/sprints/` say what each sprint teaches; the ADRs in
 `docs/adr/` record why the code is shaped the way it is.
 
-Milestones: `v0.5.0` (MVP, after Sprint 5) and `v1.0.0` (after Sprint 15).
+Milestones: `v0.5.0` (MVP, after Sprint 5) and **`v1.0.0` (shipped, after Sprint 15)** — all 15
+sprints complete. The full-course accounting is in [docs/COURSE-RETROSPECTIVE.md](docs/COURSE-RETROSPECTIVE.md);
+the five deliberately-planted-and-harvested flaws are revealed in
+[docs/sprints/flaw-ledger.md](docs/sprints/flaw-ledger.md).
 
 ## Running Atlas
 

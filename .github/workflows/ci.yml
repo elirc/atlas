@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      dotnet: ${{ steps.filter.outputs.dotnet }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: filter
+        shell: bash
+        run: |
+          if ls *.sln >/dev/null 2>&1; then
+            echo "dotnet=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "dotnet=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  verify:
+    needs: detect
+    if: needs.detect.outputs.dotnet == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Restore
+        run: dotnet restore
+      - name: Build (warnings are errors)
+        run: dotnet build --no-restore -warnaserror
+      - name: Test
+        run: dotnet test --no-build
+      - name: Format check
+        run: dotnet format --verify-no-changes --no-restore
+
+  # Added in Sprint 13 (hardening):
+  # secret-scan (gitleaks) and dependency audit (dotnet list package --vulnerable)
+
+  governance:
+    needs: detect
+    if: needs.detect.outputs.dotnet == 'false'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Docs-only change — nothing to build yet
+        run: echo "No solution present; governance/docs commit. CI green by design."

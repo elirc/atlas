@@ -20,7 +20,10 @@ public class FxRateTablePropertyTests
     // The published USD cross-rate table (mirrors FxRateTable.UsdPerUnit). USD is the pivot = 1.
     private static readonly IReadOnlyDictionary<string, decimal> UsdPerUnit = new Dictionary<string, decimal>
     {
-        ["USD"] = 1.0000m, ["EUR"] = 1.0800m, ["GBP"] = 1.2700m, ["PHP"] = 0.0179m,
+        ["USD"] = 1.0000m,
+        ["EUR"] = 1.0800m,
+        ["GBP"] = 1.2700m,
+        ["PHP"] = 0.0179m,
     };
 
     private static readonly FxRateTable Table = new();

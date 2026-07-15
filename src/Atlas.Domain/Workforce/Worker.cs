@@ -69,12 +69,16 @@ public sealed class Worker
     public DateOnly ProbationEndsOn =>
         HiredOn.AddMonths(CountryEmploymentRules.ProbationMonthsFor(Country));
 
-    /// <summary>Convenience for API projections: is the worker still in probation today?</summary>
-    public bool IsInProbation()
-    {
-        var today = DateOnly.FromDateTime(DateTime.Now);
-        return today < ProbationEndsOn;
-    }
+    /// <summary>Is the worker still in probation on the given calendar date?</summary>
+    // WHY: the date is a PARAMETER, not read from an ambient clock. "In probation?"
+    // is a question ABOUT a date, so the date is an input — the caller supplies it
+    // (the Api derives it once, at the edge, from the injected TimeProvider). This
+    // method is now pure and total, and the ambient-time ban keeps it that way.
+    // GOTCHA: the edge currently derives the date from UTC, which approximates the
+    // worker's local calendar — good enough for a probation flag, but statutory
+    // dates that must land in the worker's timezone (notice periods) will take the
+    // country's calendar explicitly. Noted in ADR-0007; not this sprint's job.
+    public bool IsInProbationOn(DateOnly date) => date < ProbationEndsOn;
 
     // WHY: EF Core materialization only.
     private Worker()

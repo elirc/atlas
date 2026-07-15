@@ -60,4 +60,23 @@ public class WorkerTests
     {
         Assert.Equal(3, CountryEmploymentRules.ProbationMonthsFor(CountryCode.From("FRA")));
     }
+
+    // ── The harvest: probation is a PURE calendar question (ADR-0007) ────────────
+    //
+    // These cases are the SPEC of the bug that was fixed this sprint: a PHL worker hired
+    // on the last day of the month, whose probation window closes on the last day six
+    // months later. The predecessor of IsInProbationOn read the server's local clock, so
+    // the boundary landed a day early for a client whose calendar day had already turned.
+    // Here the boundary is exact and timezone-free — the date is the input.
+    [Theory]
+    [InlineData("PHL", "2026-01-31", "2026-07-30", true)]  // window closes 2026-07-31; the 30th is still inside
+    [InlineData("PHL", "2026-01-31", "2026-07-31", false)] // the last day: probation has ended
+    [InlineData("PHL", "2026-01-31", "2026-08-01", false)]
+    [InlineData("USA", "2026-01-31", "2026-04-29", true)]  // window closes 2026-04-30 (Apr 31 clamps)
+    [InlineData("USA", "2026-01-31", "2026-04-30", false)]
+    public void IsInProbationOn_is_a_pure_calendar_question(
+        string country, string hired, string date, bool expected)
+    {
+        Assert.Equal(expected, SomeWorker(country, hired).IsInProbationOn(DateOnly.Parse(date)));
+    }
 }

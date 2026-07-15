@@ -17,9 +17,12 @@ internal static class DtoMapping
     public static ClientOrgDto ToDto(this ClientOrg org) =>
         new(org.Id, org.Name, org.CreatedAtUtc);
 
-    public static WorkerDto ToDto(this Worker worker) =>
+    // WHY: `asOf` is passed in — the endpoint derives it once from the injected
+    // TimeProvider (the edge), so the projection is deterministic and testable and
+    // the domain never reads an ambient clock. See the ambient-time ban.
+    public static WorkerDto ToDto(this Worker worker, DateOnly asOf) =>
         new(worker.Id, worker.FullName, worker.ContactEmail.Value, worker.Country.Value,
-            worker.HiredOn, worker.ProbationEndsOn, worker.IsInProbation(), worker.CreatedAtUtc);
+            worker.HiredOn, worker.ProbationEndsOn, worker.IsInProbationOn(asOf), worker.CreatedAtUtc);
 
     public static EmploymentTermsDto ToDto(this EmploymentRecord record) =>
         new(record.Id, record.EffectiveFrom, record.JobTitle, record.AnnualSalary,

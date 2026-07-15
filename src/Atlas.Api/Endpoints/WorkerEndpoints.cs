@@ -15,15 +15,19 @@ public static class WorkerEndpoints
         group.MapPost("/", async (
             HireWorkerRequest request,
             HireWorker useCase,
+            TimeProvider clock,
             CancellationToken ct) =>
         {
             HiredWorker hired = await useCase.ExecuteAsync(
                 request.FullName, request.ContactEmail, request.Country, request.HiredOn,
                 request.JobTitle, request.AnnualSalary, request.WeeklyHours, ct);
 
+            // The probation "as of" date is derived ONCE here, at the edge, from the
+            // injected clock — the domain projection stays pure (see the ambient-time ban).
+            DateOnly today = DateOnly.FromDateTime(clock.GetUtcNow().UtcDateTime);
             return Results.Created(
                 $"/api/v1/workers/{hired.Worker.Id}",
-                new WorkerDetailDto(hired.Worker.ToDto(), hired.InitialTerms.ToDto()));
+                new WorkerDetailDto(hired.Worker.ToDto(today), hired.InitialTerms.ToDto()));
         })
         .Produces<WorkerDetailDto>(StatusCodes.Status201Created)
         .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
@@ -32,12 +36,14 @@ public static class WorkerEndpoints
             Guid id,
             GetWorker getWorker,
             GetWorkerTerms getTerms,
+            TimeProvider clock,
             CancellationToken ct) =>
         {
             Worker worker = await getWorker.ExecuteAsync(id, ct);
             WorkerTerms terms = await getTerms.ExecuteAsync(id, null, ct);
 
-            return Results.Ok(new WorkerDetailDto(worker.ToDto(), terms.Effective?.ToDto()));
+            DateOnly today = DateOnly.FromDateTime(clock.GetUtcNow().UtcDateTime);
+            return Results.Ok(new WorkerDetailDto(worker.ToDto(today), terms.Effective?.ToDto()));
         })
         .Produces<WorkerDetailDto>()
         .ProducesProblem(StatusCodes.Status404NotFound);
@@ -81,6 +87,7 @@ public static class WorkerEndpoints
             int? limit,
             HttpResponse response,
             ListWorkers useCase,
+            TimeProvider clock,
             CancellationToken ct) =>
         {
             Page<Worker> page = await useCase.ExecuteAsync(cursor, limit, ct);
@@ -90,7 +97,8 @@ public static class WorkerEndpoints
                 response.Headers["X-Next-Cursor"] = next;
             }
 
-            return Results.Ok(page.Items.Select(w => w.ToDto()));
+            DateOnly today = DateOnly.FromDateTime(clock.GetUtcNow().UtcDateTime);
+            return Results.Ok(page.Items.Select(w => w.ToDto(today)));
         })
         .Produces<IEnumerable<WorkerDto>>()
         .ProducesProblem(StatusCodes.Status400BadRequest);

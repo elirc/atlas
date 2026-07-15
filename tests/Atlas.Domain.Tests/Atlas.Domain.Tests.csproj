@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -12,6 +12,11 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+    <!-- ADR-0005: CsCheck earns its place here (and ONLY here) — Money's laws are
+         algebraic (closure, exact allocation) and property-based testing states them as
+         laws instead of a handful of examples. Scoped to Atlas.Domain.Tests so the
+         dependency touches pure-logic tests only. -->
+    <PackageReference Include="CsCheck" Version="3.2.0" />
   </ItemGroup>
 
   <ItemGroup>

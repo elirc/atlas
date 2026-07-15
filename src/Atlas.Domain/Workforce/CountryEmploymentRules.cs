@@ -19,7 +19,7 @@ public static class CountryEmploymentRules
     private const int DefaultProbationMonths = 3;
 
     public static int ProbationMonthsFor(CountryCode country) =>
-        CountryRulePacks.TryFor(country, out CountryRulePack pack)
+        CountryRulePacks.TryFor(country, out ICountryRulePack pack)
             ? pack.ProbationMonths
             : DefaultProbationMonths;
 }

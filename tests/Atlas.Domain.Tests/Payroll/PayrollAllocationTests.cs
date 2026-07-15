@@ -38,7 +38,7 @@ public class PayrollAllocationTests
         string country, string currency, int annualSalary)
     {
         CurrencyCode ccy = CurrencyCode.From(currency);
-        CountryRulePack pack = CountryRulePacks.For(CountryCode.From(country));
+        ICountryRulePack pack = CountryRulePacks.For(CountryCode.From(country));
         EmploymentRecord record = Terms(annualSalary, currency);
 
         Money grossTotal = Money.Zero(ccy);

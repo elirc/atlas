@@ -43,6 +43,7 @@ public static class DependencyInjection
         services.AddScoped<ISessionRepository, SessionRepository>();
         services.AddScoped<IWorkerRepository, WorkerRepository>();
         services.AddScoped<IEmploymentRecordRepository, EmploymentRecordRepository>();
+        services.AddScoped<IWorkerDocumentRepository, WorkerDocumentRepository>();
         services.AddScoped<IAuditTrail, EfAuditTrail>();
         services.AddScoped<IQuoteRepository, QuoteRepository>();
         services.AddScoped<IEngagementRepository, EngagementRepository>();

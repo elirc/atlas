@@ -48,7 +48,7 @@ public sealed class CreateLeavePolicy(
 
         // The statutory floor lives on the rule pack (S4's "policy as data"). The domain
         // factory enforces entitlement >= this minimum and names it in the 422 message.
-        CountryRulePack pack = CountryRulePacks.For(code);
+        ICountryRulePack pack = CountryRulePacks.For(code);
 
         DateTimeOffset now = clock.GetUtcNow();
         var policy = LeavePolicy.Define(

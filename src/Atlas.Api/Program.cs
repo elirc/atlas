@@ -39,6 +39,7 @@ api.MapContractors();
 api.MapInvoices();
 api.MapWebhooks();
 api.MapApiKeys();
+api.MapCompliance();
 
 // `dotnet run -- migrate seed` performs database chores and exits.
 if (await StartupTasks.HandleDatabaseCommandsAsync(app, args))

@@ -12,7 +12,7 @@ public class CountryRulePackTests
     [InlineData("USA", "USD", 3)]
     public void Ships_a_pack_for_each_supported_country(string code, string currency, int probationMonths)
     {
-        CountryRulePack pack = CountryRulePacks.For(CountryCode.From(code));
+        ICountryRulePack pack = CountryRulePacks.For(CountryCode.From(code));
 
         Assert.Equal(CurrencyCode.From(currency), pack.Currency);
         Assert.Equal(probationMonths, pack.ProbationMonths);
@@ -62,7 +62,7 @@ public class CountryRulePackTests
     public void First_burden_component_prices_as_hand_checked(
         string country, int componentIndex, decimal gross, decimal expected)
     {
-        CountryRulePack pack = CountryRulePacks.For(CountryCode.From(country));
+        ICountryRulePack pack = CountryRulePacks.For(CountryCode.From(country));
         BurdenComponent component = pack.EmployerBurden[componentIndex];
 
         decimal amount = component.Rate * component.AssessableBase(gross);

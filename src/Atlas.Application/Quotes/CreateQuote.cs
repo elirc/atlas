@@ -46,7 +46,7 @@ public sealed class CreateQuote(
         Country country = await countries.FindAsync(code, cancellationToken)
             ?? throw new DomainRuleException($"Atlas does not support employment in '{code}' yet.");
 
-        CountryRulePack pack = CountryRulePacks.For(code);
+        ICountryRulePack pack = CountryRulePacks.For(code);
 
         // The gross is priced in the COUNTRY's currency — a German quote is in EUR,
         // period. The client's display currency is a separate, later concern.

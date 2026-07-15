@@ -23,6 +23,6 @@ namespace Atlas.Domain.Payroll;
 // drift. The caller hands over history; the domain decides which record governs.
 public sealed record PayrollCalculationInput(
     IReadOnlyList<EmploymentRecord> TermsHistory,
-    CountryRulePack Pack,
+    ICountryRulePack Pack,
     PayPeriod Period,
     int UnpaidLeaveDays);

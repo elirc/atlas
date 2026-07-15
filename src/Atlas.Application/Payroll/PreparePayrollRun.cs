@@ -62,7 +62,7 @@ public sealed class PreparePayrollRun(
         DateTimeOffset now = clock.GetUtcNow();
         var run = PayrollRun.Create(orgId, cycle.Id, period, context.UserId, now);
 
-        CountryRulePack pack = CountryRulePacks.For(cycle.Country);
+        ICountryRulePack pack = CountryRulePacks.For(cycle.Country);
 
         // "Active" = hired on or before the period end (see IWorkerRepository). When S05's
         // engagement states are integrated this tightens to "engagement Active on the

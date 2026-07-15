@@ -1,0 +1,44 @@
+### Atlas S11 — compliance & rule-pack plugins by hand.
+### Set @token from a register-org / login response, and @worker to a hired worker's id.
+
+@base = http://localhost:5080/api/v1
+@token = PASTE_A_SESSION_TOKEN
+@worker = PASTE_A_WORKER_ID
+
+### A worker's compliance rollup — required documents come from THEIR country's rule pack.
+### A brand-new worker is non-compliant: every required document is Missing.
+GET {{base}}/workers/{{worker}}/compliance
+Authorization: Bearer {{token}}
+
+### Record a required document (metadata + optional expiry; never the file itself).
+POST {{base}}/workers/{{worker}}/documents
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "kind": "WorkAuthorization",
+  "reference": "permit-2026-00417",
+  "expiresOn": "2027-03-31"
+}
+
+### An unknown kind is a 400 (parse-and-reject, not a silent default).
+POST {{base}}/workers/{{worker}}/documents
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "kind": "NotARealKind", "reference": "x" }
+
+### List a worker's recorded documents.
+GET {{base}}/workers/{{worker}}/documents
+Authorization: Bearer {{token}}
+
+### The org-wide expiring-documents view — what lapses in the next N days.
+GET {{base}}/compliance/expiring?withinDays=30
+Authorization: Bearer {{token}}
+
+### ---------------------------------------------------------------------------
+### The thesis, by hand: a JPN or CAN worker is priced/complied the instant the
+### pack file exists — no registry, calculator, or endpoint change. Hire a worker
+### in "JPN" and quote them: a high earner's quote carries the family-support levy
+### line that lives ONLY in JapanRulePack.cs. A "CAN" worker uses pure data.
+### ---------------------------------------------------------------------------

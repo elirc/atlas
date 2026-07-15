@@ -19,7 +19,7 @@ public static class QuoteCalculator
     public const decimal ManagementFeeCeiling = 12_000m;
     public const string ManagementFeeLabel = "Atlas management fee";
 
-    public static QuoteBreakdown Calculate(CountryRulePack pack, Money gross)
+    public static QuoteBreakdown Calculate(ICountryRulePack pack, Money gross)
     {
         // WHY: the gross must already be in the pack's currency. The use case builds it
         // from the country's own currency, so a mismatch here is a programmer error, not
@@ -44,6 +44,15 @@ public static class QuoteCalculator
             Money amount = Money.Of(component.Rate * component.AssessableBase(gross.Amount), gross.Currency)
                 .Rounded();
             lines.Add(new QuoteLineItem(component.Name, QuoteLineKind.EmployerBurden, amount));
+        }
+
+        // Code-bearing employer burden (flat levies, conditionals) the data shape can't express.
+        // Empty for every data-only country, so this fold is a no-op that changes no existing number
+        // — it exists so a JPN-style pack (S11) needs ZERO change here to have its rule priced.
+        foreach (StatutoryLine line in pack.AdditionalEmployerBurden(gross.Amount))
+        {
+            lines.Add(new QuoteLineItem(
+                line.Name, QuoteLineKind.EmployerBurden, Money.Of(line.AnnualAmount, gross.Currency).Rounded()));
         }
 
         // Atlas management fee: min(rate * gross, ceiling).

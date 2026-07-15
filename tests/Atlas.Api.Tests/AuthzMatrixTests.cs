@@ -183,6 +183,38 @@ public class AuthzMatrixTests : IClassFixture<AtlasApiFactory>, IAsyncLifetime
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
+    // ── Sprint 06 rows: leave ────────────────────────────────────────────────
+
+    [Theory]
+    [InlineData(null, HttpStatusCode.Unauthorized)]
+    [InlineData("orgAdmin", HttpStatusCode.OK)]
+    public async Task Leave_policy_list_requires_an_org_member(string? persona, HttpStatusCode expected)
+    {
+        HttpClient client = As(TokenFor(persona));
+        Assert.Equal(expected, (await client.GetAsync("/api/v1/leave-policies")).StatusCode);
+    }
+
+    [Theory]
+    [InlineData(null, HttpStatusCode.Unauthorized)]
+    [InlineData("orgAdmin", HttpStatusCode.Created)]
+    public async Task Creating_leave_policy_is_org_admin_only(string? persona, HttpStatusCode expected)
+    {
+        HttpClient client = As(TokenFor(persona));
+        HttpResponseMessage response = await client.PostAsJsonAsync(
+            "/api/v1/leave-policies",
+            new Atlas.Contracts.V1.CreateLeavePolicyRequest("USA", 24m, 10m));
+        Assert.Equal(expected, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(null, HttpStatusCode.Unauthorized)]
+    [InlineData("orgAdmin", HttpStatusCode.OK)]
+    public async Task Leave_request_list_requires_hr_or_admin(string? persona, HttpStatusCode expected)
+    {
+        HttpClient client = As(TokenFor(persona));
+        Assert.Equal(expected, (await client.GetAsync("/api/v1/leave-requests")).StatusCode);
+    }
+
     private string? TokenFor(string? persona) => persona switch
     {
         null => null,

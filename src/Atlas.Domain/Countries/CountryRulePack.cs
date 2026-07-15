@@ -41,7 +41,11 @@ public sealed record CountryRulePack(
     CountryCode Country,
     CurrencyCode Currency,
     int ProbationMonths,
-    IReadOnlyList<BurdenComponent> EmployerBurden);
+    IReadOnlyList<BurdenComponent> EmployerBurden,
+    // 🔗 Another datum on the pack, same lifecycle as ProbationMonths: the statutory
+    // MINIMUM annual paid leave (days). A leave policy may exceed it, never undercut it
+    // (LeavePolicy.Define enforces this). Illustrative values. Added S06.
+    decimal AnnualLeaveMinimumDays);
 
 /// <summary>
 /// The registry of rule packs Atlas ships with, v1. Realistic in SHAPE; the rates and
@@ -85,7 +89,8 @@ public static class CountryRulePacks
                     new BurdenComponent("Health insurance (employer)", 0.073m, AnnualWageCap: 62_100m),
                     new BurdenComponent("Unemployment insurance (employer)", 0.013m, AnnualWageCap: 90_600m),
                     new BurdenComponent("Long-term care insurance (employer)", 0.017m, AnnualWageCap: 62_100m),
-                ]),
+                ],
+                AnnualLeaveMinimumDays: 20m),
 
             // United Kingdom — employer NI is a rate ABOVE the secondary threshold.
             new CountryRulePack(
@@ -93,7 +98,8 @@ public static class CountryRulePacks
                 EmployerBurden:
                 [
                     new BurdenComponent("Employer National Insurance", 0.138m, AnnualAllowance: 9_100m),
-                ]),
+                ],
+                AnnualLeaveMinimumDays: 28m),
 
             // Philippines — monthly contribution ceilings annualized, illustrative.
             new CountryRulePack(
@@ -103,7 +109,8 @@ public static class CountryRulePacks
                     new BurdenComponent("SSS (employer)", 0.095m, AnnualWageCap: 420_000m),
                     new BurdenComponent("PhilHealth (employer)", 0.025m, AnnualWageCap: 1_200_000m),
                     new BurdenComponent("Pag-IBIG (employer)", 0.020m, AnnualWageCap: 120_000m),
-                ]),
+                ],
+                AnnualLeaveMinimumDays: 5m),
 
             // United States — FICA social security has a wage base; Medicare is uncapped.
             new CountryRulePack(
@@ -113,7 +120,8 @@ public static class CountryRulePacks
                     new BurdenComponent("Social Security (employer FICA)", 0.062m, AnnualWageCap: 168_600m),
                     new BurdenComponent("Medicare (employer)", 0.0145m),
                     new BurdenComponent("Federal unemployment (FUTA)", 0.006m, AnnualWageCap: 7_000m),
-                ]),
+                ],
+                AnnualLeaveMinimumDays: 0m),
         };
 
         return packs.ToDictionary(p => p.Country.Value);

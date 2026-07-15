@@ -52,6 +52,14 @@ public static class ServiceRegistration
         builder.Services.AddScoped<Application.Engagements.WithdrawEngagement>();
         builder.Services.AddScoped<Application.Engagements.GetEngagement>();
         builder.Services.AddScoped<Application.Engagements.ListEngagements>();
+        builder.Services.AddScoped<Application.Leave.CreateLeavePolicy>();
+        builder.Services.AddScoped<Application.Leave.ListLeavePolicies>();
+        builder.Services.AddScoped<Application.Leave.SubmitLeaveRequest>();
+        builder.Services.AddScoped<Application.Leave.ApproveLeaveRequest>();
+        builder.Services.AddScoped<Application.Leave.DenyLeaveRequest>();
+        builder.Services.AddScoped<Application.Leave.CancelLeaveRequest>();
+        builder.Services.AddScoped<Application.Leave.GetLeaveBalance>();
+        builder.Services.AddScoped<Application.Leave.ListLeaveRequests>();
 
         // The caller's identity: one RequestContext per request, exposed to the
         // Application layer as the ICurrentContext port.

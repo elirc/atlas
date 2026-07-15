@@ -1,6 +1,8 @@
+using Atlas.Application.Leave;
 using Atlas.Contracts.V1;
 using Atlas.Domain.Auditing;
 using Atlas.Domain.Countries;
+using Atlas.Domain.Leave;
 using Atlas.Domain.Orgs;
 using Atlas.Domain.Workforce;
 
@@ -17,9 +19,12 @@ internal static class DtoMapping
     public static ClientOrgDto ToDto(this ClientOrg org) =>
         new(org.Id, org.Name, org.CreatedAtUtc);
 
-    public static WorkerDto ToDto(this Worker worker) =>
+    // WHY: `asOf` is passed in — the endpoint derives it once from the injected
+    // TimeProvider (the edge), so the projection is deterministic and testable and
+    // the domain never reads an ambient clock. See the ambient-time ban.
+    public static WorkerDto ToDto(this Worker worker, DateOnly asOf) =>
         new(worker.Id, worker.FullName, worker.ContactEmail.Value, worker.Country.Value,
-            worker.HiredOn, worker.ProbationEndsOn, worker.IsInProbation(), worker.CreatedAtUtc);
+            worker.HiredOn, worker.ProbationEndsOn, worker.IsInProbationOn(asOf), worker.CreatedAtUtc);
 
     public static EmploymentTermsDto ToDto(this EmploymentRecord record) =>
         new(record.Id, record.EffectiveFrom, record.JobTitle, record.AnnualSalary,
@@ -28,4 +33,17 @@ internal static class DtoMapping
     public static AuditEntryDto ToDto(this AuditEntry entry) =>
         new(entry.Id, entry.Action, entry.SubjectType, entry.SubjectId,
             entry.ActorUserId, entry.DetailsJson, entry.AtUtc);
+
+    public static LeavePolicyDto ToDto(this LeavePolicy policy) =>
+        new(policy.Id, policy.Country.Value, policy.AnnualEntitlementDays,
+            policy.AccrualCadence.ToString(), policy.CarryoverCapDays, policy.CreatedAtUtc);
+
+    public static LeaveRequestDto ToDto(this LeaveRequest request) =>
+        new(request.Id, request.WorkerId, request.From, request.To, request.WorkingDays,
+            request.Status.ToString(), request.Note, request.RequestedByUserId,
+            request.DecidedByUserId, request.DecidedAtUtc, request.CreatedAtUtc);
+
+    public static LeaveBalanceDto ToDto(this LeaveBalanceView view) =>
+        new(view.WorkerId, view.Country, view.AsOf, view.AnnualEntitlementDays,
+            view.AccruedDays, view.SpentDays, view.AvailableDays);
 }

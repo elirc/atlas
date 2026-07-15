@@ -1,0 +1,45 @@
+using Atlas.Application.Abstractions;
+using Atlas.Infrastructure.Persistence;
+using Atlas.Infrastructure.Persistence.Repositories;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Atlas.Infrastructure;
+
+public static class DependencyInjection
+{
+    /// <summary>
+    /// Registers persistence: EF Core (Postgres for real life, SQLite for a
+    /// zero-dependency local start) plus every port implementation this layer owns.
+    /// </summary>
+    public static IServiceCollection AddAtlasPersistence(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        // WHY: provider selection is configuration, not code — the same binary runs
+        // against compose Postgres (Database:Provider=postgres) or a local SQLite
+        // file (the default when nothing is configured). Tests bypass this entirely
+        // and inject an in-memory SQLite connection.
+        string provider = configuration["Database:Provider"] ?? "sqlite";
+        string connectionString = configuration.GetConnectionString("atlas")
+            ?? "Data Source=atlas.dev.db";
+
+        services.AddDbContext<AtlasDbContext>(options =>
+        {
+            _ = provider.ToLowerInvariant() switch
+            {
+                "postgres" => options.UseNpgsql(connectionString),
+                "sqlite" => options.UseSqlite(connectionString),
+                _ => throw new InvalidOperationException(
+                    $"Unknown Database:Provider '{provider}'. Use 'postgres' or 'sqlite'."),
+            };
+        });
+
+        services.AddScoped<ICountryRepository, CountryRepository>();
+        services.AddScoped<IClientOrgRepository, ClientOrgRepository>();
+        services.AddScoped<IUnitOfWork, EfUnitOfWork>();
+
+        return services;
+    }
+}

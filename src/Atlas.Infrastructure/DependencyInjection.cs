@@ -53,6 +53,7 @@ public static class DependencyInjection
         services.AddScoped<IPayCycleRepository, PayCycleRepository>();
         services.AddScoped<IPayrollRunRepository, PayrollRunRepository>();
         services.AddScoped<IPayslipRepository, PayslipRepository>();
+        services.AddScoped<IExpenseClaimRepository, ExpenseClaimRepository>();
         // WHY: IEventSink is already registered (S05, Messaging.LoggingEventSink) — payroll
         // reuses that seam. Only the payroll-specific unpaid-leave stand-in is new here.
         services.AddScoped<IUnpaidLeaveCalendar, Payroll.NoUnpaidLeaveCalendar>();

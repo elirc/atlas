@@ -1,0 +1,76 @@
+# Atlas — expense claims + the unified approval inbox (Sprint 08)
+# Login first (see auth.http) and paste the bearer token below.
+# You also need a worker id — hire one via workers.http and paste it in.
+
+@host = http://localhost:5000
+@token = PASTE_TOKEN_HERE
+@workerId = PASTE_WORKER_ID
+
+### Submit an expense claim for a worker (HR/admin on behalf, v1) → 201
+# Amount is a Money DTO: a decimal + its currency, always together (S07). Receipt is METADATA
+# only — a url + filename; Atlas stores no binary this sprint.
+POST {{host}}/api/v1/expenses
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "workerId": "{{workerId}}",
+  "amount": { "amount": 240.00, "currency": "USD" },
+  "category": "Travel",
+  "receiptUrl": "https://receipts.example/abc",
+  "receiptFilename": "taxi.pdf",
+  "note": "Client visit"
+}
+
+### Unknown category → 400 (a malformed request, not a business-rule violation)
+POST {{host}}/api/v1/expenses
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "workerId": "{{workerId}}",
+  "amount": { "amount": 50.00, "currency": "USD" },
+  "category": "Sorcery"
+}
+
+### Non-positive amount → 422 (a domain rule)
+POST {{host}}/api/v1/expenses
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "workerId": "{{workerId}}",
+  "amount": { "amount": 0, "currency": "USD" },
+  "category": "Meals"
+}
+
+### Approve a submitted claim → 200
+POST {{host}}/api/v1/expenses/PASTE_CLAIM_ID/approve
+Authorization: Bearer {{token}}
+
+### Deny a submitted claim, with an optional reason → 200
+POST {{host}}/api/v1/expenses/PASTE_CLAIM_ID/deny
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "reason": "Missing itemised receipt."
+}
+
+### Cancel a submitted or approved claim → 200 (a reimbursed claim cannot be cancelled)
+POST {{host}}/api/v1/expenses/PASTE_CLAIM_ID/cancel
+Authorization: Bearer {{token}}
+
+### Read one claim
+GET {{host}}/api/v1/expenses/PASTE_CLAIM_ID
+Authorization: Bearer {{token}}
+
+### List the org's expense claims (org-scoped, cursor pagination as everywhere)
+GET {{host}}/api/v1/expenses?limit=20
+Authorization: Bearer {{token}}
+
+### THE PAYOFF: the unified approval inbox — pending LEAVE and EXPENSES in one worklist
+# Submit a leave request (leave.http) AND an expense above, then call this: both appear, newest
+# submitted first. `kind` tells the client which resource to POST the decision to.
+GET {{host}}/api/v1/approvals?limit=50
+Authorization: Bearer {{token}}

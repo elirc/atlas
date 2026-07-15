@@ -28,6 +28,8 @@ api.MapQuotes();
 api.MapEngagements();
 api.MapLeave();
 api.MapPayroll();
+api.MapExpenses();
+api.MapApprovals();
 
 // `dotnet run -- migrate seed` performs database chores and exits.
 if (await StartupTasks.HandleDatabaseCommandsAsync(app, args))

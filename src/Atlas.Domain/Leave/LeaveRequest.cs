@@ -1,3 +1,5 @@
+using Atlas.Domain.Approvals;
+
 namespace Atlas.Domain.Leave;
 
 /// <summary>Where a leave request sits in its lifecycle.</summary>
@@ -17,12 +19,12 @@ public enum LeaveRequestStatus
 /// silently no-op. Overlap and balance checks are NOT here (they need other requests and
 /// a policy) — they live in the approve use case.
 /// </summary>
-// 🔗 LEARN: this approval flow is DELIBERATELY concrete — states, a decider, a decision
-// timestamp, all inlined on this one entity. Expenses (S8) will be the SECOND consumer,
-// and that is when the generic ApprovalWorkflow&lt;T&gt; gets extracted — on the second
-// real use, not on this speculation. The shape here is the specification S8 factors out.
-// Copying once is cheaper than the wrong abstraction; today's duplication is tomorrow's
-// spec. (The S6 review debate names this out loud; the Reviewer predicts the extraction.)
+// 🔗 S08 UPDATE: the approval flow that was DELIBERATELY concrete in S06 is now rewired
+// through the generic ApprovalWorkflow&lt;LeaveApprovalSubject&gt; — the extraction the S06
+// review predicted, done on the SECOND consumer (expenses), not on speculation. The public
+// surface here is byte-for-byte what it was: same LeaveRequestStatus, same properties, same
+// guard messages. Only the guard LOGIC moved. The proof it preserved behaviour is that the
+// S06 tests AND the S08 characterization tests are green and untouched — see ADR-0009.
 public sealed class LeaveRequest
 {
     public const int MaxNoteLength = 500;
@@ -116,16 +118,22 @@ public sealed class LeaveRequest
             LeaveRequestStatus.Draft, requestedByUserId, createdAtUtc);
     }
 
+    // 🔍 THE REFACTOR, VISIBLE: each transition now asks the shared guard whether the move is
+    // legal (throwing the SAME message it used to throw inline), then performs the state write.
+    // The Draft→Submitted / Submitted→Approved etc. rules — and their exact wording — moved out
+    // of a private RequireStatus on this class and into ApprovalWorkflow<LeaveApprovalSubject>.
+    // The (ApprovalState) cast is total and safe: LeaveRequestStatus and ApprovalState share the
+    // same members and values (ApprovalWorkflowTests pins it).
     public void Submit(DateTimeOffset atUtc)
     {
-        RequireStatus(LeaveRequestStatus.Draft, "submitted");
+        ApprovalWorkflow<LeaveApprovalSubject>.EnsureCanSubmit((ApprovalState)Status);
         Status = LeaveRequestStatus.Submitted;
         SubmittedAtUtc = atUtc;
     }
 
     public void Approve(Guid decidedByUserId, DateTimeOffset atUtc)
     {
-        RequireStatus(LeaveRequestStatus.Submitted, "approved");
+        ApprovalWorkflow<LeaveApprovalSubject>.EnsureCanApprove((ApprovalState)Status);
         Status = LeaveRequestStatus.Approved;
         DecidedByUserId = decidedByUserId;
         DecidedAtUtc = atUtc;
@@ -133,7 +141,7 @@ public sealed class LeaveRequest
 
     public void Deny(Guid decidedByUserId, DateTimeOffset atUtc)
     {
-        RequireStatus(LeaveRequestStatus.Submitted, "denied");
+        ApprovalWorkflow<LeaveApprovalSubject>.EnsureCanDeny((ApprovalState)Status);
         Status = LeaveRequestStatus.Denied;
         DecidedByUserId = decidedByUserId;
         DecidedAtUtc = atUtc;
@@ -144,31 +152,13 @@ public sealed class LeaveRequest
         // WHY: a request can be pulled while pending OR after approval (plans change); a
         // denied or already-cancelled request is terminal. No timestamp is stamped here —
         // the audit entry the use case writes carries who cancelled and when.
-        if (Status is not (LeaveRequestStatus.Submitted or LeaveRequestStatus.Approved))
-        {
-            throw new DomainRuleException(
-                $"A {Describe(Status)} leave request cannot be cancelled.");
-        }
-
+        ApprovalWorkflow<LeaveApprovalSubject>.EnsureCanCancel((ApprovalState)Status);
         Status = LeaveRequestStatus.Cancelled;
     }
 
     /// <summary>Do this request and the [otherFrom, otherTo] range share any calendar day?</summary>
     public bool Overlaps(DateOnly otherFrom, DateOnly otherTo) =>
         From <= otherTo && otherFrom <= To;
-
-    private void RequireStatus(LeaveRequestStatus expected, string verb)
-    {
-        if (Status != expected)
-        {
-            throw new DomainRuleException(
-                $"Only a {Describe(expected)} leave request can be {verb} " +
-                $"(this one is {Describe(Status)}).");
-        }
-    }
-
-    private static string Describe(LeaveRequestStatus status) =>
-        status.ToString().ToLowerInvariant();
 
     private static decimal CountWorkingDays(DateOnly from, DateOnly to)
     {

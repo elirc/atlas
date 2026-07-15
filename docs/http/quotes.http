@@ -1,0 +1,81 @@
+# Atlas — quotes & the cost calculator (Sprint 04)
+# Run against: dotnet run --project src/Atlas.Api  (defaults to http://localhost:5000)
+# Quotes are org-owned: authenticate first (register-org returns a token).
+
+@host = http://localhost:5000
+
+### Sign up — returns a token and creates the first OrgAdmin
+# @name signup
+POST {{host}}/api/v1/auth/register-org
+Content-Type: application/json
+
+{
+  "orgName": "Initech GmbH",
+  "email": "admin@initech.example",
+  "password": "a-long-enough-password",
+  "displayName": "Ada Admin"
+}
+
+### Capture the token from the signup response
+@token = {{signup.response.body.token}}
+
+### Create a quote — Germany, €60,000 gross → 201 + Location
+# Burden lines (pension/health/unemployment/care) + Atlas fee + totals, and the
+# employer total converted into the org display currency (USD).
+# @name createQuote
+POST {{host}}/api/v1/quotes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "countryCode": "DEU",
+  "gross": 60000
+}
+
+### Read one quote back by id (the frozen snapshot)
+@quoteId = {{createQuote.response.body.id}}
+GET {{host}}/api/v1/quotes/{{quoteId}}
+Authorization: Bearer {{token}}
+
+### A big US salary — social-security cap binds, and the fee ceiling (12,000) binds
+POST {{host}}/api/v1/quotes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "countryCode": "USA",
+  "gross": 200000
+}
+
+### Unsupported country (well-formed, not onboarded) → 422 domain-rule-violated
+POST {{host}}/api/v1/quotes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "countryCode": "FRA",
+  "gross": 60000
+}
+
+### Non-positive gross → 422 domain-rule-violated
+POST {{host}}/api/v1/quotes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "countryCode": "DEU",
+  "gross": 0
+}
+
+### List this org's quotes (newest first, cursor pagination)
+# Follow the X-Next-Cursor RESPONSE HEADER for the next page.
+GET {{host}}/api/v1/quotes?limit=2
+Authorization: Bearer {{token}}
+
+### Next page (paste the X-Next-Cursor value)
+GET {{host}}/api/v1/quotes?limit=2&cursor=PASTE_CURSOR_HERE
+Authorization: Bearer {{token}}
+
+### Out-of-range limit → 400 invalid-request (rejected, not clamped)
+GET {{host}}/api/v1/quotes?limit=0
+Authorization: Bearer {{token}}

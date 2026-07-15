@@ -1,0 +1,98 @@
+# Atlas — hiring lifecycle state machine (Sprint 05)
+# Login first (see auth.http) and paste the bearer token below.
+# You also need a quote id (see quotes.http) — an engagement starts from one.
+
+@host = http://localhost:5000
+@token = PASTE_TOKEN_HERE
+@quoteId = PASTE_QUOTE_ID_HERE
+
+### Start a hire from a quote (HR manager or org admin) → 201
+# Country + pay come from the quote; the role title and hours are the hire's own.
+POST {{host}}/api/v1/engagements
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "quoteId": "{{quoteId}}",
+  "roleTitle": "Senior Engineer",
+  "weeklyHours": 40
+}
+
+### The engagement, with its onboarding checklist and (empty) timeline
+GET {{host}}/api/v1/engagements/PASTE_ENGAGEMENT_ID
+Authorization: Bearer {{token}}
+
+### Send the offer to a named candidate: Quote → Offer
+POST {{host}}/api/v1/engagements/PASTE_ENGAGEMENT_ID/send-offer
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "candidateName": "Maria Santos",
+  "candidateEmail": "maria.santos@example.com"
+}
+
+### Candidate accepts on a calendar date: Offer → Contract
+POST {{host}}/api/v1/engagements/PASTE_ENGAGEMENT_ID/accept-offer
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "acceptedOn": "2026-08-01"
+}
+
+### Complete onboarding items (the first one starts onboarding: Contract → Onboarding)
+# Item names are the slugs from GET /{id} — e.g. contract-signed, id-verified,
+# bank-details, and for Germany, works-council-notification.
+POST {{host}}/api/v1/engagements/PASTE_ENGAGEMENT_ID/checklist/contract-signed/complete
+Authorization: Bearer {{token}}
+
+###
+POST {{host}}/api/v1/engagements/PASTE_ENGAGEMENT_ID/checklist/id-verified/complete
+Authorization: Bearer {{token}}
+
+###
+POST {{host}}/api/v1/engagements/PASTE_ENGAGEMENT_ID/checklist/bank-details/complete
+Authorization: Bearer {{token}}
+
+###
+POST {{host}}/api/v1/engagements/PASTE_ENGAGEMENT_ID/checklist/works-council-notification/complete
+Authorization: Bearer {{token}}
+
+### Retry a completed item → still 200, idempotent (no second activity row)
+POST {{host}}/api/v1/engagements/PASTE_ENGAGEMENT_ID/checklist/contract-signed/complete
+Authorization: Bearer {{token}}
+
+### Activate: Onboarding → Active. Creates the Worker + initial terms in one commit.
+POST {{host}}/api/v1/engagements/PASTE_ENGAGEMENT_ID/activate
+Authorization: Bearer {{token}}
+
+### The worker the activation created (follow createdWorkerId from the response above)
+GET {{host}}/api/v1/workers/PASTE_WORKER_ID
+Authorization: Bearer {{token}}
+
+### Try to activate before onboarding is complete → 422 (business rule violated)
+POST {{host}}/api/v1/engagements/PASTE_UNFINISHED_ENGAGEMENT_ID/activate
+Authorization: Bearer {{token}}
+
+### Withdraw (legal only from Offer or Contract) → Withdrawn
+POST {{host}}/api/v1/engagements/PASTE_ENGAGEMENT_ID/withdraw
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "reason": "Candidate accepted another role"
+}
+
+### Illegal transition: withdraw once onboarding started → 422 problem+json
+POST {{host}}/api/v1/engagements/PASTE_ONBOARDING_ENGAGEMENT_ID/withdraw
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "reason": "too late"
+}
+
+### List engagements (org-scoped, newest-first cursor pagination)
+GET {{host}}/api/v1/engagements?limit=20
+Authorization: Bearer {{token}}

@@ -1,3 +1,4 @@
+using System.Globalization;
 using Atlas.Api.Idempotency;
 using Atlas.Application.Errors;
 using Atlas.Domain;
@@ -23,6 +24,7 @@ public sealed class AtlasExceptionHandler(IProblemDetailsService problemDetails)
         //   400 invalid-request:      the request itself is malformed
         //   422 domain-rule-violated: well-formed request, but the business said no
         //   401 / 403:                who you are / what you may do
+        //   429 too-many-requests:    you're rate-limited — back off (Retry-After)
         //   503 vendor-unavailable:   a downstream we depend on is momentarily down — retry
         // Anything else is a genuine bug and stays a 500 (handled by the default pipeline; we
         // deliberately do NOT catch it here). UnmappedVendorStateException is intentionally in
@@ -57,6 +59,12 @@ public sealed class AtlasExceptionHandler(IProblemDetailsService problemDetails)
                 StatusCodes.Status403Forbidden,
                 AtlasProblems.Forbidden,
                 "Permission denied"),
+            // S13: brute-force throttling. A retryable 429 — the client should wait for the
+            // Retry-After window rather than hammering into a longer lockout.
+            TooManyRequestsException => (
+                StatusCodes.Status429TooManyRequests,
+                AtlasProblems.TooManyRequests,
+                "Too many requests"),
             // WHY a distinct 503 (not a 500): the request is fine and the business rules are
             // satisfied — a downstream vendor is just momentarily unreachable. Telling the client
             // "retry" (503) rather than "you broke something" (500 or 4xx) is the honest signal.
@@ -78,6 +86,14 @@ public sealed class AtlasExceptionHandler(IProblemDetailsService problemDetails)
         {
             // WHY: RFC 7235 — a 401 MUST say how to authenticate.
             httpContext.Response.Headers.WWWAuthenticate = "Bearer";
+        }
+
+        if (exception is TooManyRequestsException throttled)
+        {
+            // WHY: RFC 6585 — a 429 SHOULD carry Retry-After (whole seconds) so a well-behaved
+            // client waits the cool-down instead of extending its own lockout.
+            int seconds = Math.Max(1, (int)Math.Ceiling(throttled.RetryAfter.TotalSeconds));
+            httpContext.Response.Headers.RetryAfter = seconds.ToString(CultureInfo.InvariantCulture);
         }
 
         return await problemDetails.TryWriteAsync(new ProblemDetailsContext

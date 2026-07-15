@@ -23,8 +23,10 @@ public class LoginLogoutTests
             _hasher.Hash("correct-horse-battery"), Now));
     }
 
+    // S13: Login now takes an ILoginThrottle. Here lockout is not the subject, so a no-op throttle
+    // keeps these flows exactly as before; the throttle's own behaviour is covered in LoginThrottleTests.
     private Login LoginUseCase() =>
-        new(_users, _sessions, _hasher, _tokens, _uow, new FixedClock(Now));
+        new(_users, _sessions, _hasher, _tokens, new NoLoginThrottle(), _uow, new FixedClock(Now));
 
     [Fact]
     public async Task Valid_credentials_mint_a_session()

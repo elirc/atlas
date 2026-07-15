@@ -12,11 +12,18 @@ namespace Atlas.Api.Tests;
 // LEARN: reviewers read the DENY cases first. The 200s tell you what the feature
 // does; the 401/403/404s tell you what the system protects. A matrix like this
 // turns "did we remember authz?" from a memory exercise into a diff review.
+//
+// 🔍 S13 note: the matrix is necessary but not sufficient. It did not catch AF-3 (the
+// cross-org worker read) because the HTTP endpoint 404s via a PAIRED org-scoped terms
+// lookup even while the leaky use case returns the row. The matrix row below is a
+// regression GUARD (it passes before and after the fix); the genuine exposing test is
+// at the use-case boundary in Atlas.Application.Tests (WorkerTenancyTests). Keep both.
 public class AuthzMatrixTests : IClassFixture<AtlasApiFactory>, IAsyncLifetime
 {
     private readonly AtlasApiFactory _factory;
 
     private string _orgAdminToken = null!;
+    private string _orgBAdminToken = null!;
     private string _opsToken = null!;
     private Guid _orgAId;
     private Guid _orgBId;
@@ -37,6 +44,7 @@ public class AuthzMatrixTests : IClassFixture<AtlasApiFactory>, IAsyncLifetime
 
         var orgB = await setup.RegisterOrgAsync(
             "Matrix Org B", $"matrix-b-{Guid.NewGuid():N}@example.com");
+        _orgBAdminToken = orgB.Token;
         _orgBId = orgB.User.OrgId!.Value;
 
         _opsToken = await setup.LoginOpsAsync();
@@ -141,6 +149,38 @@ public class AuthzMatrixTests : IClassFixture<AtlasApiFactory>, IAsyncLifetime
                 new DateOnly(2026, 8, 1), "Analyst", 50_000m, 40));
 
         Assert.Equal(expected, response.StatusCode);
+    }
+
+    // ── Sprint 13 addition: worker DETAIL by id (AF-3 regression guard) ──────
+
+    [Fact]
+    public async Task Worker_detail_by_id_is_org_scoped()
+    {
+        // Org A hires a worker.
+        HttpClient adminA = As(_orgAdminToken);
+        HttpResponseMessage hired = await adminA.PostAsJsonAsync(
+            "/api/v1/workers",
+            new Atlas.Contracts.V1.HireWorkerRequest(
+                "Detail Worker", $"dw-{Guid.NewGuid():N}@example.com", "USA",
+                new DateOnly(2026, 8, 1), "Analyst", 50_000m, 40));
+        Assert.Equal(HttpStatusCode.Created, hired.StatusCode);
+        Guid workerId = (await hired.Content
+            .ReadFromJsonAsync<Atlas.Contracts.V1.WorkerDetailDto>())!.Worker.Id;
+
+        // Own org (admin) reads the detail.
+        Assert.Equal(HttpStatusCode.OK,
+            (await adminA.GetAsync($"/api/v1/workers/{workerId}")).StatusCode);
+
+        // WHY 404: AF-3. Another tenant must not confirm the worker exists — the by-id read is
+        // org-scoped (GetWorker.FindInOrgAsync), not merely authenticated. This row passed even
+        // BEFORE the fix (the endpoint's paired terms lookup 404'd), which is precisely why the
+        // matrix missed the leak; it stands here as the standing regression guard.
+        Assert.Equal(HttpStatusCode.NotFound,
+            (await As(_orgBAdminToken).GetAsync($"/api/v1/workers/{workerId}")).StatusCode);
+
+        // Anonymous is 401.
+        Assert.Equal(HttpStatusCode.Unauthorized,
+            (await As(null).GetAsync($"/api/v1/workers/{workerId}")).StatusCode);
     }
 
     [Theory]

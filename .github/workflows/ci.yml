@@ -40,8 +40,50 @@ jobs:
       - name: Format check
         run: dotnet format --verify-no-changes --no-restore
 
-  # Added in Sprint 13 (hardening):
-  # secret-scan (gitleaks) and dependency audit (dotnet list package --vulnerable)
+  # ── Sprint 13 (hardening) security gates ──────────────────────────────────
+  # A finding without a gate regresses. These two turn "we should scan for secrets and
+  # known-vuln packages" from a good intention into a red build (ADR-0016, the audit doc).
+
+  secret-scan:
+    # Secrets can hide in docs and config, not just code — run this regardless of `detect`.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: gitleaks
+        shell: bash
+        # WHY the raw binary and not the marketplace action: gitleaks-action@v2 gates on a
+        # GITLEAKS_LICENSE for organization repos; the binary has no such gate, so the check is
+        # reproducible everywhere. `detect --no-git` scans the working tree against our config; the
+        # allowlist in .gitleaks.toml exempts the `atls_`/`atk_`/`whsec_` FIXTURE tokens and test
+        # passwords by pattern, so a REAL secret still trips the default high-entropy rule (ADR-0016).
+        run: |
+          VERSION=8.18.4
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/gitleaks_${VERSION}_linux_x64.tar.gz" | tar -xz gitleaks
+          ./gitleaks detect --no-git --config .gitleaks.toml --redact --exit-code 1
+
+  dependency-audit:
+    needs: detect
+    if: needs.detect.outputs.dotnet == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Restore
+        run: dotnet restore
+      - name: Audit NuGet packages for known vulnerabilities
+        shell: bash
+        run: |
+          # `dotnet list package --vulnerable` exits 0 even when it finds problems, so we grep its
+          # report and fail ourselves. --include-transitive because a vuln three levels down still
+          # ships in our bytes. This is the "fail on known-vuln" gate the audit demanded.
+          dotnet list package --vulnerable --include-transitive 2>&1 | tee vuln-report.txt
+          if grep -Eiq '\b(Critical|High|Moderate|Low)\b' vuln-report.txt; then
+            echo "::error::Vulnerable NuGet packages detected — see vuln-report.txt above."
+            exit 1
+          fi
+          echo "No known-vulnerable packages."
 
   governance:
     needs: detect

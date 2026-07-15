@@ -1,0 +1,38 @@
+# gitleaks configuration for Atlas — added Sprint 13 (ADR-0016, security audit).
+#
+# The gate must catch a REAL leaked secret while staying quiet about the many FIXTURE
+# secrets the course deliberately ships: test passwords, illustrative signing secrets,
+# and the `atls_`/`atk_`/`whsec_` token prefixes that appear in tests and .http files.
+# An allowlist that is too broad is a gate that never fires; these entries are narrow.
+
+title = "Atlas gitleaks config"
+
+[extend]
+# Start from gitleaks' built-in rule set (AWS keys, private keys, generic high-entropy, …).
+useDefault = true
+
+[allowlist]
+description = "Course fixtures and illustrative secrets — not real credentials."
+
+paths = [
+  '''.*\.http$''',                 # request samples carry example bearer tokens
+  '''docs/.*''',                   # threat model / audit docs quote token SHAPES, not values
+  '''tests/.*''',                  # test fixtures: fast hashers, sample tokens, seeded passwords
+]
+
+regexes = [
+  # Test/seed passwords used across the suite and seeder — intentionally weak, never real.
+  '''a-long-enough-password''',
+  '''ops-password-for-tests''',
+  '''correct-horse-battery''',
+  # Atlas token PREFIXES appear in docs and tests as illustration; a real leaked token would
+  # still trip the default high-entropy rule on its RANDOM tail, which is not allowlisted.
+  '''atls_(totally_forged|example[0-9a-z_]*)''',
+  '''atk_example[0-9a-z_]*''',
+  '''whsec_example[0-9a-z_]*''',
+]
+
+# NOTE (recorded, ADR-0011 debt): the webhook signing secret is stored in readable form in the
+# database because we must sign with it. gitleaks scans the REPO, not the database — this config
+# does not, and cannot, cover that exposure. The threat model tracks it; production envelope-
+# encrypts it (KMS). Naming the boundary is the point.

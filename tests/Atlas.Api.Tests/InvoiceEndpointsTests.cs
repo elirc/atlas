@@ -73,7 +73,9 @@ public class InvoiceEndpointsTests : IClassFixture<AtlasApiFactory>, IAsyncLifet
         invoice = await TransitionAsync(admin, $"/api/v1/invoices/{invoice.Id}/admin-approve");
         Assert.Equal("Approved", invoice.Status);
 
-        invoice = await TransitionAsync(admin, $"/api/v1/invoices/{invoice.Id}/pay");
+        HttpResponseMessage payResponse = await admin.PostMoneyMoveAsync($"/api/v1/invoices/{invoice.Id}/pay");
+        payResponse.EnsureSuccessStatusCode();
+        invoice = (await payResponse.Content.ReadFromJsonAsync<ContractorInvoiceDto>())!;
         Assert.Equal("Paid", invoice.Status);
         Assert.False(string.IsNullOrWhiteSpace(invoice.VendorReference));
 
@@ -95,7 +97,7 @@ public class InvoiceEndpointsTests : IClassFixture<AtlasApiFactory>, IAsyncLifet
             .Content.ReadFromJsonAsync<ContractorInvoiceDto>())!;
 
         // Straight to pay, skipping both approvals.
-        HttpResponseMessage payResponse = await admin.PostAsync($"/api/v1/invoices/{invoice.Id}/pay", null);
+        HttpResponseMessage payResponse = await admin.PostMoneyMoveAsync($"/api/v1/invoices/{invoice.Id}/pay");
         Assert.Equal(HttpStatusCode.UnprocessableEntity, payResponse.StatusCode);
     }
 
@@ -139,7 +141,7 @@ public class InvoiceEndpointsTests : IClassFixture<AtlasApiFactory>, IAsyncLifet
 
         await TransitionAsync(admin, $"/api/v1/invoices/{invoice.Id}/hr-approve");
         await TransitionAsync(admin, $"/api/v1/invoices/{invoice.Id}/admin-approve");
-        await TransitionAsync(admin, $"/api/v1/invoices/{invoice.Id}/pay");
+        (await admin.PostMoneyMoveAsync($"/api/v1/invoices/{invoice.Id}/pay")).EnsureSuccessStatusCode();
 
         HttpResponseMessage listResponse = await admin.GetAsync("/api/v1/invoices?status=Paid");
         Assert.Equal(HttpStatusCode.OK, listResponse.StatusCode);

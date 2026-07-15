@@ -67,15 +67,18 @@ public class PayrollEndpointsTests : IClassFixture<AtlasApiFactory>
         Assert.Equal(HttpStatusCode.OK,
             (await client.PostAsync($"/api/v1/payroll/runs/{runId}/approve", null)).StatusCode);
 
-        HttpResponseMessage executed = await client.PostAsync($"/api/v1/payroll/runs/{runId}/execute", null);
+        HttpResponseMessage executed = await client.PostMoneyMoveAsync($"/api/v1/payroll/runs/{runId}/execute");
         Assert.Equal(HttpStatusCode.OK, executed.StatusCode);
         PayrollRunDto executedRun = (await executed.Content.ReadFromJsonAsync<PayrollRunDto>())!;
         Assert.Equal("Executed", executedRun.State);
         Assert.NotNull(executedRun.ExecutedAtUtc);
 
-        // Re-executing an executed run is a no-op that still succeeds (idempotent).
+        // Re-executing with a DIFFERENT idempotency key genuinely re-enters the use case — which is
+        // exactly how we prove the two idempotency layers AGREE rather than fight: the S10 middleware
+        // dedupes identical retries, and underneath, S07's own natural-key guard makes a re-execute of
+        // an already-executed run a no-op that still returns 200.
         Assert.Equal(HttpStatusCode.OK,
-            (await client.PostAsync($"/api/v1/payroll/runs/{runId}/execute", null)).StatusCode);
+            (await client.PostMoneyMoveAsync($"/api/v1/payroll/runs/{runId}/execute")).StatusCode);
 
         // The payslip reads back with its full line detail.
         PayslipDto slip = (await client.GetFromJsonAsync<PayslipDto>($"/api/v1/payslips/{payslipId}"))!;
@@ -97,7 +100,7 @@ public class PayrollEndpointsTests : IClassFixture<AtlasApiFactory>
             .Content.ReadFromJsonAsync<PayrollRunDetailDto>())!;
 
         HttpResponseMessage response =
-            await client.PostAsync($"/api/v1/payroll/runs/{detail.Run.Id}/execute", null);
+            await client.PostMoneyMoveAsync($"/api/v1/payroll/runs/{detail.Run.Id}/execute");
 
         Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
     }

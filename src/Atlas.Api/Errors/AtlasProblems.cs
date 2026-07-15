@@ -16,4 +16,7 @@ public static class AtlasProblems
 
     // S09: a downstream payment vendor is momentarily unreachable (503, retryable).
     public const string VendorUnavailable = Base + "vendor-unavailable";
+
+    // S10: an Idempotency-Key was reused with a different request body (422, client bug).
+    public const string IdempotencyConflict = Base + "idempotency-conflict";
 }

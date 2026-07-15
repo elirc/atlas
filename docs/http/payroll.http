@@ -1,0 +1,79 @@
+# Atlas — payroll: cycles, gross-to-net runs, idempotent execution (Sprint 07)
+# Login first (see auth.http) and paste the bearer token below.
+# Hire at least one worker in the cycle's country first (see workers.http).
+
+@host = http://localhost:5000
+@token = PASTE_TOKEN_HERE
+
+### Open a monthly pay cycle for Germany (org admin) → 201
+POST {{host}}/api/v1/payroll/cycles
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "country": "DEU",
+  "frequency": "monthly"
+}
+
+### List this org's pay cycles
+GET {{host}}/api/v1/payroll/cycles
+Authorization: Bearer {{token}}
+
+### Prepare the run for March 2026 → 201 (computes a payslip per active worker)
+# Paste the cycle id from the create response above.
+POST {{host}}/api/v1/payroll/runs
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "cycleId": "PASTE_CYCLE_ID",
+  "year": 2026,
+  "month": 3
+}
+
+### Prepare the SAME period again → 200, the identical run (idempotent by natural key)
+POST {{host}}/api/v1/payroll/runs
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "cycleId": "PASTE_CYCLE_ID",
+  "year": 2026,
+  "month": 3
+}
+
+### The run with its computed totals and payslip summaries
+GET {{host}}/api/v1/payroll/runs/PASTE_RUN_ID
+Authorization: Bearer {{token}}
+
+### Submit for review (Draft → InReview)
+POST {{host}}/api/v1/payroll/runs/PASTE_RUN_ID/submit-for-review
+Authorization: Bearer {{token}}
+
+### Approve (InReview → Approved)
+POST {{host}}/api/v1/payroll/runs/PASTE_RUN_ID/approve
+Authorization: Bearer {{token}}
+
+### Reject instead (InReview → Draft) — sends the run back to be fixed
+POST {{host}}/api/v1/payroll/runs/PASTE_RUN_ID/reject
+Authorization: Bearer {{token}}
+
+### Execute (Approved → Executed) — records the run as final; money moves in S09
+POST {{host}}/api/v1/payroll/runs/PASTE_RUN_ID/execute
+Authorization: Bearer {{token}}
+
+### Execute again → 200, unchanged (idempotent — re-running is safe)
+POST {{host}}/api/v1/payroll/runs/PASTE_RUN_ID/execute
+Authorization: Bearer {{token}}
+
+### Execute a Draft run → 422 (authorization follows STATE, not only role)
+POST {{host}}/api/v1/payroll/runs/PASTE_DRAFT_RUN_ID/execute
+Authorization: Bearer {{token}}
+
+### List runs (org-scoped, cursor pagination as everywhere)
+GET {{host}}/api/v1/payroll/runs?limit=10
+Authorization: Bearer {{token}}
+
+### One worker's full payslip, every line
+GET {{host}}/api/v1/payslips/PASTE_PAYSLIP_ID
+Authorization: Bearer {{token}}

@@ -1,6 +1,7 @@
 using Atlas.Application.Abstractions;
 using Atlas.Application.Pagination;
 using Atlas.Domain.Auditing;
+using Atlas.Domain.Countries;
 using Atlas.Domain.Workforce;
 using Microsoft.EntityFrameworkCore;
 
@@ -35,6 +36,17 @@ internal sealed class WorkerRepository(AtlasDbContext db) : IWorkerRepository
 
         return await query.Take(fetch).ToListAsync(ct);
     }
+
+    // S07 addition: the payroll population — active workers of one org in one country as of
+    // a date. Whole set, not a page (a run processes everyone in one pass). "Active" = hired
+    // on or before asOf; ordered oldest-first so the run's payslips read in hire order.
+    public async Task<IReadOnlyList<Worker>> ListActiveInCountryAsync(
+        Guid orgId, CountryCode country, DateOnly asOf, CancellationToken ct) =>
+        await db.Set<Worker>().AsNoTracking()
+            .Where(w => w.OrgId == orgId && w.Country == country && w.HiredOn <= asOf)
+            .OrderBy(w => w.CreatedAtUtc)
+            .ThenBy(w => w.Id)
+            .ToListAsync(ct);
 }
 
 internal sealed class EmploymentRecordRepository(AtlasDbContext db) : IEmploymentRecordRepository

@@ -374,6 +374,132 @@ namespace Atlas.Infrastructure.Persistence.Migrations
                     b.ToTable("client_orgs", (string)null);
                 });
 
+            modelBuilder.Entity("Atlas.Domain.Payroll.PayCycle", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Country")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character(3)")
+                        .IsFixedLength();
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Frequency")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid>("OrgId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrgId", "Country", "Frequency")
+                        .IsUnique();
+
+                    b.ToTable("pay_cycles", (string)null);
+                });
+
+            modelBuilder.Entity("Atlas.Domain.Payroll.PayrollRun", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("ExecutedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("OrgId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PayCycleId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("PeriodEnd")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly>("PeriodStart")
+                        .HasColumnType("date");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PayCycleId", "PeriodStart")
+                        .IsUnique();
+
+                    b.HasIndex("OrgId", "CreatedAtUtc", "Id");
+
+                    b.ToTable("payroll_runs", (string)null);
+                });
+
+            modelBuilder.Entity("Atlas.Domain.Payroll.Payslip", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("OrgId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("PeriodEnd")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly>("PeriodStart")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("RunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("WorkerId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RunId");
+
+                    b.ToTable("payslips", (string)null);
+                });
+
+            modelBuilder.Entity("Atlas.Domain.Payroll.PayslipLine", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<Guid?>("PayslipId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PayslipId");
+
+                    b.ToTable("payslip_lines", (string)null);
+                });
+
             modelBuilder.Entity("Atlas.Domain.Quotes.Quote", b =>
                 {
                     b.Property<Guid>("Id")
@@ -513,6 +639,135 @@ namespace Atlas.Infrastructure.Persistence.Migrations
                     b.Navigation("Checklist");
                 });
 
+            modelBuilder.Entity("Atlas.Domain.Payroll.Payslip", b =>
+                {
+                    b.HasOne("Atlas.Domain.Payroll.PayrollRun", null)
+                        .WithMany("Payslips")
+                        .HasForeignKey("RunId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.OwnsOne("Atlas.Domain.Money", "EmployerCost", b1 =>
+                        {
+                            b1.Property<Guid>("PayslipId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<decimal>("Amount")
+                                .HasPrecision(14, 2)
+                                .HasColumnType("numeric(14,2)")
+                                .HasColumnName("employer_cost_amount");
+
+                            b1.Property<string>("Currency")
+                                .IsRequired()
+                                .HasMaxLength(3)
+                                .HasColumnType("character(3)")
+                                .HasColumnName("employer_cost_currency")
+                                .IsFixedLength();
+
+                            b1.HasKey("PayslipId");
+
+                            b1.ToTable("payslips");
+
+                            b1.WithOwner()
+                                .HasForeignKey("PayslipId");
+                        });
+
+                    b.OwnsOne("Atlas.Domain.Money", "Gross", b1 =>
+                        {
+                            b1.Property<Guid>("PayslipId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<decimal>("Amount")
+                                .HasPrecision(14, 2)
+                                .HasColumnType("numeric(14,2)")
+                                .HasColumnName("gross_amount");
+
+                            b1.Property<string>("Currency")
+                                .IsRequired()
+                                .HasMaxLength(3)
+                                .HasColumnType("character(3)")
+                                .HasColumnName("gross_currency")
+                                .IsFixedLength();
+
+                            b1.HasKey("PayslipId");
+
+                            b1.ToTable("payslips");
+
+                            b1.WithOwner()
+                                .HasForeignKey("PayslipId");
+                        });
+
+                    b.OwnsOne("Atlas.Domain.Money", "Net", b1 =>
+                        {
+                            b1.Property<Guid>("PayslipId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<decimal>("Amount")
+                                .HasPrecision(14, 2)
+                                .HasColumnType("numeric(14,2)")
+                                .HasColumnName("net_amount");
+
+                            b1.Property<string>("Currency")
+                                .IsRequired()
+                                .HasMaxLength(3)
+                                .HasColumnType("character(3)")
+                                .HasColumnName("net_currency")
+                                .IsFixedLength();
+
+                            b1.HasKey("PayslipId");
+
+                            b1.ToTable("payslips");
+
+                            b1.WithOwner()
+                                .HasForeignKey("PayslipId");
+                        });
+
+                    b.Navigation("EmployerCost")
+                        .IsRequired();
+
+                    b.Navigation("Gross")
+                        .IsRequired();
+
+                    b.Navigation("Net")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Atlas.Domain.Payroll.PayslipLine", b =>
+                {
+                    b.HasOne("Atlas.Domain.Payroll.Payslip", null)
+                        .WithMany("Lines")
+                        .HasForeignKey("PayslipId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.OwnsOne("Atlas.Domain.Money", "Amount", b1 =>
+                        {
+                            b1.Property<Guid>("PayslipLineId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<decimal>("Amount")
+                                .HasPrecision(14, 2)
+                                .HasColumnType("numeric(14,2)")
+                                .HasColumnName("amount");
+
+                            b1.Property<string>("Currency")
+                                .IsRequired()
+                                .HasMaxLength(3)
+                                .HasColumnType("character(3)")
+                                .HasColumnName("currency")
+                                .IsFixedLength();
+
+                            b1.HasKey("PayslipLineId");
+
+                            b1.ToTable("payslip_lines");
+
+                            b1.WithOwner()
+                                .HasForeignKey("PayslipLineId");
+                        });
+
+                    b.Navigation("Amount")
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Atlas.Domain.Quotes.Quote", b =>
                 {
                     b.OwnsOne("Atlas.Domain.Money", "DisplayTotal", b1 =>
@@ -648,6 +903,16 @@ namespace Atlas.Infrastructure.Persistence.Migrations
 
                     b.Navigation("TotalEmployerCost")
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Atlas.Domain.Payroll.PayrollRun", b =>
+                {
+                    b.Navigation("Payslips");
+                });
+
+            modelBuilder.Entity("Atlas.Domain.Payroll.Payslip", b =>
+                {
+                    b.Navigation("Lines");
                 });
 #pragma warning restore 612, 618
         }

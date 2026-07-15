@@ -50,6 +50,12 @@ public static class DependencyInjection
         services.AddScoped<IQuoteReader, Adapters.QuoteReader>();
         services.AddScoped<ILeavePolicyRepository, LeavePolicyRepository>();
         services.AddScoped<ILeaveRequestRepository, LeaveRequestRepository>();
+        services.AddScoped<IPayCycleRepository, PayCycleRepository>();
+        services.AddScoped<IPayrollRunRepository, PayrollRunRepository>();
+        services.AddScoped<IPayslipRepository, PayslipRepository>();
+        // WHY: IEventSink is already registered (S05, Messaging.LoggingEventSink) — payroll
+        // reuses that seam. Only the payroll-specific unpaid-leave stand-in is new here.
+        services.AddScoped<IUnpaidLeaveCalendar, Payroll.NoUnpaidLeaveCalendar>();
         services.AddScoped<IUnitOfWork, EfUnitOfWork>();
 
         // Stateless immutable cross-rate table — a singleton, like the crypto services.

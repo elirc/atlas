@@ -1,0 +1,53 @@
+### Atlas S14 — reporting read models, N+1-free, by hand.
+### Set @token from a register-org / login response (an OrgAdmin or HrManager).
+### Seed some data first: hire a few workers in different countries, record a soon-expiring
+### document or two, and execute a payroll run — then the reports below have something to show.
+
+@base = http://localhost:5080/api/v1
+@token = PASTE_A_SESSION_TOKEN
+
+### Headcount by country, in-probation split as of today (pin ?asOf=YYYY-MM-DD to ask about a past day).
+GET {{base}}/reports/headcount
+Authorization: Bearer {{token}}
+
+### Headcount as of a chosen date — "who was in probation on this day?"
+GET {{base}}/reports/headcount?asOf=2026-06-01
+Authorization: Bearer {{token}}
+
+### Employment cost for a month, grouped by country + currency — folded from EXECUTED runs only.
+### Defaults to the current month when year/month are omitted.
+GET {{base}}/reports/employment-cost?year=2026&month=3
+Authorization: Bearer {{token}}
+
+### An impossible month is a 400 (parse-and-reject, not an empty report hiding a typo).
+GET {{base}}/reports/employment-cost?year=2026&month=13
+Authorization: Bearer {{token}}
+
+### Upcoming renewals/expiries in the next 90 days (JSON). Pin ?withinDays= to widen or narrow.
+GET {{base}}/reports/renewals?withinDays=90
+Authorization: Bearer {{token}}
+
+### The SAME query as a streaming CSV export — memory-bounded, rows written as they arrive.
+### Authorization + validation happen BEFORE the first byte; once streaming starts the status is 200.
+GET {{base}}/reports/renewals.csv?withinDays=90
+Authorization: Bearer {{token}}
+
+### The org compliance roster — every active worker with a compliant/non-compliant verdict.
+### This is the N+1 hunt's payoff: it answers across the whole org in a fixed 2 queries, not 1+N.
+### Non-compliant workers sort first (the worklist a compliance officer acts on).
+GET {{base}}/reports/compliance-roster
+Authorization: Bearer {{token}}
+
+### Reference data — the supported countries. Cached (ledger entry #1); safe because it is the same
+### for every org and changes only on deploy. Never do this for per-org data.
+GET {{base}}/reports/meta/countries
+Authorization: Bearer {{token}}
+
+### Anonymous is a 401 — reports name people and pay; the whole surface is behind a token.
+GET {{base}}/reports/headcount
+
+### ---------------------------------------------------------------------------
+### The exercises (docs/sprints/sprint-14.md): add "avg time in onboarding by country"
+### (SQL-first or domain-first?); turn on query logging and find a fourth N+1; delete the FX
+### cache's invalidation line and describe the blast radius. Do the last one — it teaches the ledger.
+### ---------------------------------------------------------------------------

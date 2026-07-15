@@ -41,6 +41,7 @@ api.MapInvoices();
 api.MapWebhooks();
 api.MapApiKeys();
 api.MapCompliance();
+api.MapReports();
 
 // S12: /api/v2 is a SIBLING base path, not a rewrite — a new version is a new shape over the same
 // domain. Today it re-issues exactly ONE resource (the payslip, with grouped lines); v1 keeps serving

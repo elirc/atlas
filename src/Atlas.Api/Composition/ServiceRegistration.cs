@@ -60,6 +60,16 @@ public static class ServiceRegistration
         builder.Services.AddScoped<Application.Leave.CancelLeaveRequest>();
         builder.Services.AddScoped<Application.Leave.GetLeaveBalance>();
         builder.Services.AddScoped<Application.Leave.ListLeaveRequests>();
+        builder.Services.AddScoped<Application.Payroll.CreatePayCycle>();
+        builder.Services.AddScoped<Application.Payroll.ListPayCycles>();
+        builder.Services.AddScoped<Application.Payroll.PreparePayrollRun>();
+        builder.Services.AddScoped<Application.Payroll.SubmitPayrollRun>();
+        builder.Services.AddScoped<Application.Payroll.ApprovePayrollRun>();
+        builder.Services.AddScoped<Application.Payroll.RejectPayrollRun>();
+        builder.Services.AddScoped<Application.Payroll.ExecutePayrollRun>();
+        builder.Services.AddScoped<Application.Payroll.GetPayrollRun>();
+        builder.Services.AddScoped<Application.Payroll.ListPayrollRuns>();
+        builder.Services.AddScoped<Application.Payroll.GetPayslip>();
 
         // The caller's identity: one RequestContext per request, exposed to the
         // Application layer as the ICurrentContext port.

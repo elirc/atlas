@@ -1,0 +1,86 @@
+# Atlas — contractor invoicing: submit, two-step approval, pay via PayGrid (Sprint 09)
+# Login first (see auth.http) and paste the bearer token below.
+# The happy path here runs as an org admin, who is permitted at every step.
+
+@host = http://localhost:5000
+@token = PASTE_TOKEN_HERE
+
+### Register a contractor (HR/admin) → 201
+POST {{host}}/api/v1/contractors
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Dana Devlin",
+  "email": "dana@example.com",
+  "country": "USA",
+  "payoutCurrency": "USD"
+}
+
+### List this org's contractors
+GET {{host}}/api/v1/contractors
+Authorization: Bearer {{token}}
+
+### Submit an invoice for the contractor (HR/admin, on their behalf) → 201, status "Submitted"
+# Paste the contractor id from the create response above. Every line must be in the
+# contractor's payout currency (USD here) — a EUR line would be a 422.
+POST {{host}}/api/v1/invoices
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "contractorId": "PASTE_CONTRACTOR_ID",
+  "lines": [
+    { "description": "Design work", "amount": 100.00, "currency": "USD" },
+    { "description": "Build work", "amount": 50.00, "currency": "USD" }
+  ]
+}
+
+### Mixed-currency invoice → 422 (single-currency invariant)
+POST {{host}}/api/v1/invoices
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "contractorId": "PASTE_CONTRACTOR_ID",
+  "lines": [
+    { "description": "USD line", "amount": 100.00, "currency": "USD" },
+    { "description": "EUR line", "amount": 50.00, "currency": "EUR" }
+  ]
+}
+
+### Step 1 of 2 — HR approves (Submitted → HrApproved)
+POST {{host}}/api/v1/invoices/PASTE_INVOICE_ID/hr-approve
+Authorization: Bearer {{token}}
+
+### Admin-approve BEFORE hr-approve → 422 (the two-step order is structural)
+POST {{host}}/api/v1/invoices/PASTE_SUBMITTED_INVOICE_ID/admin-approve
+Authorization: Bearer {{token}}
+
+### Step 2 of 2 — admin authorises the money (HrApproved → Approved)
+POST {{host}}/api/v1/invoices/PASTE_INVOICE_ID/admin-approve
+Authorization: Bearer {{token}}
+
+### Pay (Approved → Paid) — money moves through the PayGrid ACL → 200, status "Paid"
+POST {{host}}/api/v1/invoices/PASTE_INVOICE_ID/pay
+Authorization: Bearer {{token}}
+
+### Pay before both approvals → 422 (only an Approved/Failed invoice is payable)
+POST {{host}}/api/v1/invoices/PASTE_UNAPPROVED_INVOICE_ID/pay
+Authorization: Bearer {{token}}
+
+### The invoice with its lines, total, status, and vendor reference
+GET {{host}}/api/v1/invoices/PASTE_INVOICE_ID
+Authorization: Bearer {{token}}
+
+### List invoices (org-scoped, cursor pagination as everywhere)
+GET {{host}}/api/v1/invoices?limit=10
+Authorization: Bearer {{token}}
+
+### The reconciliation query — every Paid invoice (finance checks these against the vendor statement)
+GET {{host}}/api/v1/invoices?status=Paid
+Authorization: Bearer {{token}}
+
+### Reconcile one invoice against the provider's settlement (async settlement, no webhooks until S10)
+GET {{host}}/api/v1/invoices/PASTE_INVOICE_ID/reconciliation
+Authorization: Bearer {{token}}

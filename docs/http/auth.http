@@ -1,0 +1,62 @@
+# Atlas — auth & tenancy (Sprint 02)
+# Run against: dotnet run --project src/Atlas.Api
+
+@host = http://localhost:5000
+
+### Self-service signup: org + first admin + live session, atomically
+POST {{host}}/api/v1/auth/register-org
+Content-Type: application/json
+
+{
+  "orgName": "Initech GmbH",
+  "email": "ada@initech.example",
+  "password": "correct-horse-battery",
+  "displayName": "Ada Admin"
+}
+
+### Login (copy the token from the response)
+POST {{host}}/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "ada@initech.example",
+  "password": "correct-horse-battery"
+}
+
+### Who am I?
+GET {{host}}/api/v1/auth/me
+Authorization: Bearer PASTE_TOKEN_HERE
+
+### Wrong password — SAME body as unknown user (no enumeration oracle)
+POST {{host}}/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "ada@initech.example",
+  "password": "wrong-password!"
+}
+
+### My own org → 200
+GET {{host}}/api/v1/client-orgs/PASTE_YOUR_ORG_ID
+Authorization: Bearer PASTE_TOKEN_HERE
+
+### Someone else's org → 404 (NOT 403 — existence is need-to-know)
+GET {{host}}/api/v1/client-orgs/00000000-0000-0000-0000-000000000001
+Authorization: Bearer PASTE_TOKEN_HERE
+
+### Platform staff: list every org (dev seed: ops@atlas.example / atlas-ops-dev-password)
+POST {{host}}/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "ops@atlas.example",
+  "password": "atlas-ops-dev-password"
+}
+
+### ...then:
+GET {{host}}/api/v1/client-orgs?limit=10
+Authorization: Bearer PASTE_OPS_TOKEN_HERE
+
+### Logout (idempotent server-side; the token stops working)
+POST {{host}}/api/v1/auth/logout
+Authorization: Bearer PASTE_TOKEN_HERE

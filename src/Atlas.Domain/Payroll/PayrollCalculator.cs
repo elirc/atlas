@@ -104,8 +104,14 @@ public static class PayrollCalculator
         return new PayslipCalculation(periodGross, lines, net, employerCost);
     }
 
-    // Split an annual figure across the 12 monthly periods: round annual / 12 to the cent,
-    // the same share every period. Simple and obvious.
+    // 📘 THE PENNY-ALLOCATION PAYOFF. An annual figure divided by 12 rarely lands on whole
+    // cents: €100,000 / 12 = 8,333.33… Rounding each period independently (the naive way
+    // this method was first written) makes the 12 period-shares sum to 99,999.96 — four
+    // cents evaporate from the worker's year. Money.Allocate refuses to lose them: it
+    // splits the ROUNDED annual into 12 shares whose sum is EXACTLY annual (largest-
+    // remainder — the leftover cents go to the earliest periods), then hands back this
+    // period's slice. The property test "twelve periods sum to annual" is what turned the
+    // naive version RED; this is the GREEN. (docs/concepts/money-allocation.md.)
     private static Money PeriodShareOf(Money annual, int periodIndex) =>
-        Money.Of(annual.Amount / PeriodsPerYear, annual.Currency).Rounded();
+        annual.Rounded().Allocate(PeriodsPerYear)[periodIndex];
 }

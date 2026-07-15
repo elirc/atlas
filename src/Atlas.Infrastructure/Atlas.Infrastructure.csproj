@@ -10,6 +10,12 @@
     <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.3" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- WHY: adapters stay internal (the port is the public surface), but their
+         focused tests live in Api.Tests. Test visibility without public exposure. -->
+    <InternalsVisibleTo Include="Atlas.Api.Tests" />
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>

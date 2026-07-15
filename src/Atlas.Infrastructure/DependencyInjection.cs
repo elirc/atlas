@@ -38,7 +38,14 @@ public static class DependencyInjection
 
         services.AddScoped<ICountryRepository, CountryRepository>();
         services.AddScoped<IClientOrgRepository, ClientOrgRepository>();
+        services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IMembershipRepository, MembershipRepository>();
+        services.AddScoped<ISessionRepository, SessionRepository>();
         services.AddScoped<IUnitOfWork, EfUnitOfWork>();
+
+        // Stateless crypto services — singletons on purpose.
+        services.AddSingleton<IPasswordHasher, Security.Pbkdf2PasswordHasher>();
+        services.AddSingleton<ISessionTokens, Security.SessionTokenService>();
 
         return services;
     }

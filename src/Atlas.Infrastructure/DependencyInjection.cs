@@ -54,6 +54,14 @@ public static class DependencyInjection
         services.AddScoped<IPayrollRunRepository, PayrollRunRepository>();
         services.AddScoped<IPayslipRepository, PayslipRepository>();
         services.AddScoped<IExpenseClaimRepository, ExpenseClaimRepository>();
+        // S09 — contractor invoicing persistence.
+        services.AddScoped<IContractorRepository, ContractorRepository>();
+        services.AddScoped<IContractorInvoiceRepository, ContractorInvoiceRepository>();
+        // S09 — the PayGrid mock vendor and the payment anti-corruption layer. Nothing above
+        // IPaymentProvider ever sees a PayGrid type; the adapter is where the dialect stops (ADR-0010).
+        services.AddSingleton(Vendors.PayGrid.PayGridSettings.Default);
+        services.AddSingleton<Vendors.PayGrid.PayGridClient>();
+        services.AddScoped<IPaymentProvider, Vendors.PayGrid.PayGridPaymentProvider>();
         // WHY: IEventSink is already registered (S05, Messaging.LoggingEventSink) — payroll
         // reuses that seam. Only the payroll-specific unpaid-leave stand-in is new here.
         services.AddScoped<IUnpaidLeaveCalendar, Payroll.NoUnpaidLeaveCalendar>();

@@ -44,6 +44,14 @@ public static class ServiceRegistration
         builder.Services.AddScoped<Application.Quotes.CreateQuote>();
         builder.Services.AddScoped<Application.Quotes.GetQuote>();
         builder.Services.AddScoped<Application.Quotes.ListQuotes>();
+        builder.Services.AddScoped<Application.Engagements.CreateEngagement>();
+        builder.Services.AddScoped<Application.Engagements.SendOffer>();
+        builder.Services.AddScoped<Application.Engagements.AcceptOffer>();
+        builder.Services.AddScoped<Application.Engagements.CompleteOnboardingItem>();
+        builder.Services.AddScoped<Application.Engagements.ActivateEngagement>();
+        builder.Services.AddScoped<Application.Engagements.WithdrawEngagement>();
+        builder.Services.AddScoped<Application.Engagements.GetEngagement>();
+        builder.Services.AddScoped<Application.Engagements.ListEngagements>();
 
         // The caller's identity: one RequestContext per request, exposed to the
         // Application layer as the ICurrentContext port.

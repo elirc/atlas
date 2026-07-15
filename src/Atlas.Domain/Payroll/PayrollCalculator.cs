@@ -77,6 +77,15 @@ public static class PayrollCalculator
             deductionsTotal += periodShare;
         }
 
+        // Code-bearing employee deductions (a JPN-style conditional). Empty for data-only countries,
+        // so this fold changes no existing payslip; a code-bearing pack (S11) needs zero change here.
+        foreach (StatutoryLine line in input.Pack.AdditionalEmployeeDeductions(annualAmount))
+        {
+            Money periodShare = PeriodShareOf(Money.Of(line.AnnualAmount, currency), index);
+            lines.Add(new PayslipLineItem(line.Name, PayslipLineKind.EmployeeDeduction, periodShare));
+            deductionsTotal += periodShare;
+        }
+
         // ── Unpaid leave: days × daily rate, this period only (never allocated across the
         // year — the leave happened THIS period) ────────────────────────────────────────
         if (input.UnpaidLeaveDays > 0)
@@ -98,6 +107,14 @@ public static class PayrollCalculator
                 Money.Of(component.Rate * component.AssessableBase(annualAmount), currency),
                 index);
             lines.Add(new PayslipLineItem(component.Name, PayslipLineKind.EmployerBurden, periodShare));
+            employerCost += periodShare;
+        }
+
+        // Code-bearing employer burden (a JPN-style flat levy). Empty for data-only countries.
+        foreach (StatutoryLine line in input.Pack.AdditionalEmployerBurden(annualAmount))
+        {
+            Money periodShare = PeriodShareOf(Money.Of(line.AnnualAmount, currency), index);
+            lines.Add(new PayslipLineItem(line.Name, PayslipLineKind.EmployerBurden, periodShare));
             employerCost += periodShare;
         }
 

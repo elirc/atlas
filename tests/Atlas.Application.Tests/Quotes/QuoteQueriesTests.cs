@@ -15,7 +15,7 @@ public class QuoteQueriesTests
 
     private static Quote MakeQuote(Guid orgId, DateTimeOffset at)
     {
-        CountryRulePack pack = CountryRulePacks.For(CountryCode.From("DEU"));
+        ICountryRulePack pack = CountryRulePacks.For(CountryCode.From("DEU"));
         QuoteBreakdown breakdown = QuoteCalculator.Calculate(pack, Money.Of(50_000m, CurrencyCode.From("EUR")));
         Money display = Money.Of(breakdown.TotalEmployerCost.Amount, CurrencyCode.From("USD"));
         return Quote.FromBreakdown(orgId, CountryCode.From("DEU"), breakdown, display, Guid.NewGuid(), at);

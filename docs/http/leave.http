@@ -1,0 +1,84 @@
+# Atlas — leave policies, requests, balances (Sprint 06)
+# Login first (see auth.http) and paste the bearer token below.
+# You also need a worker id — hire one via workers.http and paste it in.
+
+@host = http://localhost:5000
+@token = PASTE_TOKEN_HERE
+@workerId = PASTE_WORKER_ID
+
+### Define the org's leave policy for the US (org admin only) → 201
+# 24 days/year, up to 10 carried into the next year. USA statutory minimum is 0.
+POST {{host}}/api/v1/leave-policies
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "country": "USA",
+  "annualEntitlementDays": 24,
+  "carryoverCapDays": 10
+}
+
+### Below the statutory minimum → 422 (the message names the country's floor)
+# Germany's illustrative minimum is 20 days; 10 is refused.
+POST {{host}}/api/v1/leave-policies
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "country": "DEU",
+  "annualEntitlementDays": 10,
+  "carryoverCapDays": 5
+}
+
+### List the org's leave policies
+GET {{host}}/api/v1/leave-policies
+Authorization: Bearer {{token}}
+
+### Submit a leave request for a worker (HR/admin on behalf, v1) → 201
+# Mon–Fri in September = 5 working days (weekends don't count; no holiday calendars yet).
+POST {{host}}/api/v1/leave-requests
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "workerId": "{{workerId}}",
+  "from": "2026-09-07",
+  "to": "2026-09-11",
+  "note": "Family visit"
+}
+
+### Approve it → 200 (checks balance as of the leave's start + no overlap)
+POST {{host}}/api/v1/leave-requests/PASTE_REQUEST_ID/approve
+Authorization: Bearer {{token}}
+
+### Deny a different request → 200
+POST {{host}}/api/v1/leave-requests/PASTE_REQUEST_ID/deny
+Authorization: Bearer {{token}}
+
+### Cancel a submitted or approved request → 200
+POST {{host}}/api/v1/leave-requests/PASTE_REQUEST_ID/cancel
+Authorization: Bearer {{token}}
+
+### Overdraw the balance: approving more than accrued → 422
+# Early January has barely accrued; a ten-day request there cannot be approved.
+POST {{host}}/api/v1/leave-requests
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "workerId": "{{workerId}}",
+  "from": "2026-01-05",
+  "to": "2026-01-16"
+}
+
+### The worker's balance today (derived, never stored)
+GET {{host}}/api/v1/workers/{{workerId}}/leave-balance
+Authorization: Bearer {{token}}
+
+### ...and as of a chosen date ("what will they have on July 1?")
+GET {{host}}/api/v1/workers/{{workerId}}/leave-balance?asOf=2026-07-01
+Authorization: Bearer {{token}}
+
+### List leave requests (org-scoped, cursor pagination as everywhere)
+GET {{host}}/api/v1/leave-requests?limit=20
+Authorization: Bearer {{token}}

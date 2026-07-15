@@ -180,6 +180,83 @@ namespace Atlas.Infrastructure.Persistence.Migrations
                     b.ToTable("countries", (string)null);
                 });
 
+            modelBuilder.Entity("Atlas.Domain.Engagements.Engagement", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly?>("AcceptedOn")
+                        .HasColumnType("date");
+
+                    b.Property<DateTimeOffset?>("ActivatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("AnnualSalary")
+                        .HasPrecision(14, 2)
+                        .HasColumnType("numeric(14,2)");
+
+                    b.Property<string>("CandidateEmail")
+                        .HasMaxLength(254)
+                        .HasColumnType("character varying(254)");
+
+                    b.Property<string>("CandidateName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Country")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character(3)")
+                        .IsFixedLength();
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedWorkerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("OfferSentAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("OnboardingStartedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("OrgId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("QuoteId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RoleTitle")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("SalaryCurrency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character(3)")
+                        .IsFixedLength();
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<decimal>("WeeklyHours")
+                        .HasPrecision(4, 1)
+                        .HasColumnType("numeric(4,1)");
+
+                    b.Property<DateTimeOffset?>("WithdrawnAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrgId", "CreatedAtUtc", "Id");
+
+                    b.ToTable("engagements", (string)null);
+                });
+
             modelBuilder.Entity("Atlas.Domain.Orgs.ClientOrg", b =>
                 {
                     b.Property<Guid>("Id")
@@ -306,6 +383,37 @@ namespace Atlas.Infrastructure.Persistence.Migrations
                     b.HasIndex("OrgId", "CreatedAtUtc", "Id");
 
                     b.ToTable("workers", (string)null);
+                });
+
+            modelBuilder.Entity("Atlas.Domain.Engagements.Engagement", b =>
+                {
+                    b.OwnsMany("Atlas.Domain.Engagements.EngagementChecklistItem", "Checklist", b1 =>
+                        {
+                            b1.Property<Guid>("Id")
+                                .HasColumnType("uuid");
+
+                            b1.Property<DateTimeOffset?>("CompletedAtUtc")
+                                .HasColumnType("timestamp with time zone");
+
+                            b1.Property<Guid>("EngagementId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<string>("Name")
+                                .IsRequired()
+                                .HasMaxLength(80)
+                                .HasColumnType("character varying(80)");
+
+                            b1.HasKey("Id");
+
+                            b1.HasIndex("EngagementId");
+
+                            b1.ToTable("engagement_checklist_items", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("EngagementId");
+                        });
+
+                    b.Navigation("Checklist");
                 });
 
             modelBuilder.Entity("Atlas.Domain.Quotes.Quote", b =>

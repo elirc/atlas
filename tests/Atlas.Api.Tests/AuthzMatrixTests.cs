@@ -153,6 +153,36 @@ public class AuthzMatrixTests : IClassFixture<AtlasApiFactory>, IAsyncLifetime
         Assert.Equal(expected, (await client.GetAsync("/api/v1/audit-log")).StatusCode);
     }
 
+    // ── Sprint 05 rows: engagements ─────────────────────────────────────────
+
+    [Theory]
+    [InlineData(null, HttpStatusCode.Unauthorized)]
+    [InlineData("orgAdmin", HttpStatusCode.OK)]
+    public async Task Engagement_list_requires_an_org_member(string? persona, HttpStatusCode expected)
+    {
+        HttpClient client = As(TokenFor(persona));
+        Assert.Equal(expected, (await client.GetAsync("/api/v1/engagements")).StatusCode);
+    }
+
+    [Theory]
+    [InlineData(null, HttpStatusCode.Unauthorized)]
+    [InlineData("orgAdmin", HttpStatusCode.NotFound)] // own org, but no such engagement
+    public async Task Reading_a_missing_engagement(string? persona, HttpStatusCode expected)
+    {
+        HttpClient client = As(TokenFor(persona));
+        Assert.Equal(expected,
+            (await client.GetAsync($"/api/v1/engagements/{Guid.NewGuid()}")).StatusCode);
+    }
+
+    [Fact]
+    public async Task Creating_an_engagement_requires_authentication()
+    {
+        HttpResponseMessage response = await As(null).PostAsJsonAsync(
+            "/api/v1/engagements",
+            new Atlas.Contracts.V1.CreateEngagementRequest(Guid.NewGuid(), "Engineer", 40m));
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
     private string? TokenFor(string? persona) => persona switch
     {
         null => null,

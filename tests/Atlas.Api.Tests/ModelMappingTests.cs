@@ -28,6 +28,7 @@ public class ModelMappingTests : IClassFixture<AtlasApiFactory>
     private static readonly HashSet<string> DeliberatelyUnmapped =
     [
         "Worker.ProbationEndsOn", // computed from HiredOn + country rules
+        "EngagementChecklistItem.IsComplete", // computed from CompletedAtUtc
     ];
 
     [Fact]

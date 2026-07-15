@@ -110,6 +110,8 @@ public static class DependencyInjection
         services.AddSingleton<IPasswordHasher, Security.Pbkdf2PasswordHasher>();
         services.AddSingleton<ISessionTokens, Security.SessionTokenService>();
         services.AddSingleton<ISecretGenerator, Security.SecretGenerator>();
+        // S13 — login rate limiting (AF-6). Singleton: the failure counters ARE process state.
+        services.AddSingleton<ILoginThrottle, Security.InMemoryLoginThrottle>();
 
         return services;
     }

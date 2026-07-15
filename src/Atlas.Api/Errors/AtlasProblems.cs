@@ -19,4 +19,7 @@ public static class AtlasProblems
 
     // S10: an Idempotency-Key was reused with a different request body (422, client bug).
     public const string IdempotencyConflict = Base + "idempotency-conflict";
+
+    // S13: the caller is rate-limited (429, retryable after a cool-down — see Retry-After).
+    public const string TooManyRequests = Base + "too-many-requests";
 }

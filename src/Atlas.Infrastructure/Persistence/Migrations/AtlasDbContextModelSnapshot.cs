@@ -699,6 +699,11 @@ namespace Atlas.Infrastructure.Persistence.Migrations
                     b.Property<DateOnly>("PeriodStart")
                         .HasColumnType("date");
 
+                    b.Property<string>("SelectedVendor")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
                     b.Property<string>("State")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -767,6 +772,129 @@ namespace Atlas.Infrastructure.Persistence.Migrations
                     b.HasIndex("PayslipId");
 
                     b.ToTable("payslip_lines", (string)null);
+                });
+
+            modelBuilder.Entity("Atlas.Domain.Payroll.VendorAssignment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Country")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character(3)")
+                        .IsFixedLength();
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("EffectiveFrom")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("OrgId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Vendor")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrgId", "Country", "EffectiveFrom")
+                        .IsUnique();
+
+                    b.ToTable("vendor_assignments", (string)null);
+                });
+
+            modelBuilder.Entity("Atlas.Domain.Payroll.VendorComparisonLine", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character(3)")
+                        .IsFixedLength();
+
+                    b.Property<bool>("Divergent")
+                        .HasColumnType("boolean");
+
+                    b.Property<long>("EmployerCostDeltaMinor")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("GrossDeltaMinor")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("NetDeltaMinor")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid?>("VendorComparisonReportId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("WorkerId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("VendorComparisonReportId");
+
+                    b.ToTable("vendor_comparison_lines", (string)null);
+                });
+
+            modelBuilder.Entity("Atlas.Domain.Payroll.VendorComparisonReport", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Country")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character(3)")
+                        .IsFixedLength();
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("DivergentCount")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("MaxAbsNetDeltaMinor")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("OrgId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("PrimaryVendor")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid>("RunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ShadowVendor")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<int>("ToleranceMinorUnits")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("WorkerCount")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RunId", "CreatedAtUtc");
+
+                    b.HasIndex("OrgId", "CreatedAtUtc", "Id");
+
+                    b.ToTable("vendor_comparison_reports", (string)null);
                 });
 
             modelBuilder.Entity("Atlas.Domain.Quotes.Quote", b =>
@@ -1291,6 +1419,14 @@ namespace Atlas.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Atlas.Domain.Payroll.VendorComparisonLine", b =>
+                {
+                    b.HasOne("Atlas.Domain.Payroll.VendorComparisonReport", null)
+                        .WithMany("Lines")
+                        .HasForeignKey("VendorComparisonReportId")
+                        .OnDelete(DeleteBehavior.Cascade);
+                });
+
             modelBuilder.Entity("Atlas.Domain.Quotes.Quote", b =>
                 {
                     b.OwnsOne("Atlas.Domain.Money", "DisplayTotal", b1 =>
@@ -1439,6 +1575,11 @@ namespace Atlas.Infrastructure.Persistence.Migrations
                 });
 
             modelBuilder.Entity("Atlas.Domain.Payroll.Payslip", b =>
+                {
+                    b.Navigation("Lines");
+                });
+
+            modelBuilder.Entity("Atlas.Domain.Payroll.VendorComparisonReport", b =>
                 {
                     b.Navigation("Lines");
                 });

@@ -46,6 +46,9 @@ internal sealed class PayrollRunConfiguration : IEntityTypeConfiguration<Payroll
 
         builder.Property(r => r.State).HasConversion<string>().HasMaxLength(20).IsRequired();
 
+        // S12: the calculation vendor this run was PINNED to at creation (cycle-in-flight rule).
+        builder.Property(r => r.SelectedVendor).HasConversion<string>().HasMaxLength(20).IsRequired();
+
         // Read-only properties: mapped explicitly.
         builder.Property(r => r.OrgId);
         builder.Property(r => r.PayCycleId);

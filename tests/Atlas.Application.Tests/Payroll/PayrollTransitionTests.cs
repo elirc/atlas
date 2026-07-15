@@ -22,7 +22,7 @@ public class PayrollTransitionTests
     private PayrollRun SeedRun(Action<PayrollRun>? advance = null)
     {
         var run = PayrollRun.Create(
-            OrgId, Guid.NewGuid(), PayPeriod.ForMonth(2026, 3), Guid.NewGuid(), Now);
+            OrgId, Guid.NewGuid(), PayPeriod.ForMonth(2026, 3), Guid.NewGuid(), PayrollVendor.AtlasNative, Now);
         advance?.Invoke(run);
         _runs.Rows.Add(run);
         return run;

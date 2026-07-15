@@ -26,7 +26,7 @@ public class PayrollReadsTests
         var record = EmploymentRecord.Create(
             Guid.NewGuid(), new DateOnly(2026, 1, 1), "Engineer", 60_000m, "EUR", 40, Guid.NewGuid(), Now);
 
-        var run = PayrollRun.Create(orgId, Guid.NewGuid(), period, Guid.NewGuid(), Now);
+        var run = PayrollRun.Create(orgId, Guid.NewGuid(), period, Guid.NewGuid(), PayrollVendor.AtlasNative, Now);
         var calc = PayrollCalculator.Calculate(new PayrollCalculationInput([record], pack, period, 0));
         run.AddPayslip(Payslip.FromCalculation(run.Id, record.WorkerId, orgId, period, calc, Now));
 

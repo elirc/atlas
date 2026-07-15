@@ -18,6 +18,11 @@ public class PreparePayrollRunTests
     private readonly InMemoryPayrollRunRepository _runs = new();
     private readonly InMemoryWorkerRepository _workers = new();
     private readonly InMemoryEmploymentRecordRepository _records = new();
+    // S12: PreparePayrollRun now resolves + pins a vendor. With no assignment seeded, the resolver
+    // falls back to AtlasNative, and the directory resolves it to the pure engine — so these
+    // pre-S12 behaviour tests stay behaviour-identical (only the two new constructor args are added).
+    private readonly InMemoryVendorAssignmentRepository _vendorAssignments = new();
+    private readonly FakePayrollVendorDirectory _vendorDirectory = FakePayrollVendorDirectory.Native();
     private readonly StubUnpaidLeaveCalendar _leave = new(days: 0);
     private readonly RecordingAuditTrail _audit = new();
     private readonly CountingUnitOfWork _uow = new();
@@ -26,7 +31,7 @@ public class PreparePayrollRunTests
         PayCycle.Create(OrgId, CountryCode.From("DEU"), PayFrequency.Monthly, Now);
 
     private PreparePayrollRun UseCase(StubContext? ctx = null) => new(
-        _cycles, _runs, _workers, _records, _leave, _audit, _uow,
+        _cycles, _runs, _workers, _records, _vendorAssignments, _vendorDirectory, _leave, _audit, _uow,
         ctx ?? StubContext.OrgUser(OrgId, Role.OrgAdmin, UserId),
         new FixedClock(Now));
 
@@ -54,6 +59,7 @@ public class PreparePayrollRunTests
 
         Assert.False(prepared.AlreadyExisted);
         Assert.Equal(PayrollRunState.Draft, prepared.Run.State);
+        Assert.Equal(PayrollVendor.AtlasNative, prepared.Run.SelectedVendor);
         Assert.Equal(2, prepared.Run.Payslips.Count);
         Assert.Single(_runs.Rows);
         Assert.Equal(1, _uow.Commits);

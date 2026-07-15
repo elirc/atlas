@@ -37,6 +37,14 @@ public sealed class AtlasExceptionHandler(IProblemDetailsService problemDetails)
                 StatusCodes.Status422UnprocessableEntity,
                 AtlasProblems.DomainRuleViolated,
                 "Business rule violated"),
+            UnauthenticatedException => (
+                StatusCodes.Status401Unauthorized,
+                AtlasProblems.Unauthenticated,
+                "Authentication required"),
+            ForbiddenException => (
+                StatusCodes.Status403Forbidden,
+                AtlasProblems.Forbidden,
+                "Permission denied"),
             _ => (0, string.Empty, string.Empty),
         };
 
@@ -46,6 +54,12 @@ public sealed class AtlasExceptionHandler(IProblemDetailsService problemDetails)
         }
 
         httpContext.Response.StatusCode = status;
+
+        if (status == StatusCodes.Status401Unauthorized)
+        {
+            // WHY: RFC 7235 — a 401 MUST say how to authenticate.
+            httpContext.Response.Headers.WWWAuthenticate = "Bearer";
+        }
 
         return await problemDetails.TryWriteAsync(new ProblemDetailsContext
         {

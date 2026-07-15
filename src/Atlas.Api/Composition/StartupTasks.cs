@@ -43,7 +43,9 @@ public static class StartupTasks
         if (seed)
         {
             var clock = scope.ServiceProvider.GetRequiredService<TimeProvider>();
-            await AtlasSeeder.SeedAsync(db, clock, CancellationToken.None);
+            var hasher = scope.ServiceProvider
+                .GetRequiredService<Application.Abstractions.IPasswordHasher>();
+            await AtlasSeeder.SeedAsync(db, clock, hasher, CancellationToken.None);
             app.Logger.LogInformation("Seed data applied.");
         }
 

@@ -7,14 +7,17 @@ namespace Atlas.Api.Tests;
 
 public class ClientOrgEndpointsTests : IClassFixture<AtlasApiFactory>
 {
-    private readonly HttpClient _client;
+    private readonly AtlasApiFactory _factory;
 
-    public ClientOrgEndpointsTests(AtlasApiFactory factory) => _client = factory.CreateClient();
+    public ClientOrgEndpointsTests(AtlasApiFactory factory) => _factory = factory;
 
     [Fact]
-    public async Task Create_returns_201_with_location_and_body()
+    public async Task Ops_create_returns_201_with_location_and_body()
     {
-        HttpResponseMessage response = await _client.PostAsJsonAsync(
+        HttpClient ops = _factory.CreateClient();
+        ops.WithBearer(await ops.LoginOpsAsync());
+
+        HttpResponseMessage response = await ops.PostAsJsonAsync(
             "/api/v1/client-orgs", new CreateClientOrgRequest("  Initech GmbH "));
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
@@ -25,21 +28,25 @@ public class ClientOrgEndpointsTests : IClassFixture<AtlasApiFactory>
     }
 
     [Fact]
-    public async Task Created_org_is_fetchable_at_its_location()
+    public async Task An_org_admin_fetches_their_own_org_at_its_location()
     {
-        HttpResponseMessage created = await _client.PostAsJsonAsync(
-            "/api/v1/client-orgs", new CreateClientOrgRequest("Roundtrip Co"));
+        HttpClient client = _factory.CreateClient();
+        AuthSessionDto session = await client.RegisterOrgAsync("Fetch Co", "fetch@example.com");
+        client.WithBearer(session.Token);
 
-        var fetched = await _client.GetFromJsonAsync<ClientOrgDto>(
-            created.Headers.Location!.ToString());
+        var fetched = await client.GetFromJsonAsync<ClientOrgDto>(
+            $"/api/v1/client-orgs/{session.User.OrgId}");
 
-        Assert.Equal("Roundtrip Co", fetched!.Name);
+        Assert.Equal("Fetch Co", fetched!.Name);
     }
 
     [Fact]
     public async Task Blank_name_is_a_422_domain_rule_problem()
     {
-        HttpResponseMessage response = await _client.PostAsJsonAsync(
+        HttpClient ops = _factory.CreateClient();
+        ops.WithBearer(await ops.LoginOpsAsync());
+
+        HttpResponseMessage response = await ops.PostAsJsonAsync(
             "/api/v1/client-orgs", new CreateClientOrgRequest("   "));
 
         Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
@@ -48,10 +55,13 @@ public class ClientOrgEndpointsTests : IClassFixture<AtlasApiFactory>
     }
 
     [Fact]
-    public async Task Unknown_org_is_404()
+    public async Task Unknown_org_is_404_even_for_ops()
     {
+        HttpClient ops = _factory.CreateClient();
+        ops.WithBearer(await ops.LoginOpsAsync());
+
         HttpResponseMessage response =
-            await _client.GetAsync($"/api/v1/client-orgs/{Guid.NewGuid()}");
+            await ops.GetAsync($"/api/v1/client-orgs/{Guid.NewGuid()}");
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -59,8 +69,10 @@ public class ClientOrgEndpointsTests : IClassFixture<AtlasApiFactory>
     [Fact]
     public async Task Out_of_range_limit_is_400()
     {
-        HttpResponseMessage response =
-            await _client.GetAsync("/api/v1/client-orgs?limit=0");
+        HttpClient ops = _factory.CreateClient();
+        ops.WithBearer(await ops.LoginOpsAsync());
+
+        HttpResponseMessage response = await ops.GetAsync("/api/v1/client-orgs?limit=0");
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -68,11 +80,14 @@ public class ClientOrgEndpointsTests : IClassFixture<AtlasApiFactory>
     [Fact]
     public async Task Pagination_walks_the_collection_via_the_header_cursor()
     {
-        // Three orgs of our own (other tests may add more; we only assert OUR walk).
+        HttpClient anon = _factory.CreateClient();
         foreach (string name in new[] { "Walk A", "Walk B", "Walk C" })
         {
-            await _client.PostAsJsonAsync("/api/v1/client-orgs", new CreateClientOrgRequest(name));
+            await anon.RegisterOrgAsync(name, $"{Guid.NewGuid():N}@example.com");
         }
+
+        HttpClient ops = _factory.CreateClient();
+        ops.WithBearer(await ops.LoginOpsAsync());
 
         var seen = new List<string>();
         string url = "/api/v1/client-orgs?limit=2";
@@ -82,7 +97,7 @@ public class ClientOrgEndpointsTests : IClassFixture<AtlasApiFactory>
         // is broken; this test would hang or the distinct-check would fail.
         for (int hop = 0; hop < 25; hop++)
         {
-            HttpResponseMessage page = await _client.GetAsync(url);
+            HttpResponseMessage page = await ops.GetAsync(url);
             page.EnsureSuccessStatusCode();
 
             List<ClientOrgDto> items =

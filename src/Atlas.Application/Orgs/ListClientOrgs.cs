@@ -5,13 +5,17 @@ using Atlas.Domain.Orgs;
 
 namespace Atlas.Application.Orgs;
 
-public sealed class ListClientOrgs(IClientOrgRepository orgs)
+public sealed class ListClientOrgs(IClientOrgRepository orgs, ICurrentContext context)
 {
     public async Task<Page<ClientOrg>> ExecuteAsync(
         string? cursor,
         int? limit,
         CancellationToken cancellationToken)
     {
+        // WHY: "every org on the platform" is a platform-staff view. Org users see
+        // exactly one org — theirs — via GET /client-orgs/{id}.
+        context.RequireAtlasOps();
+
         int pageSize = limit ?? Page<ClientOrg>.DefaultLimit;
 
         // WHY: reject, don't clamp. A silently-clamped limit=5000 teaches the client

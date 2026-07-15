@@ -1,0 +1,27 @@
+### Health & operational endpoints (S15)
+# These live at the ROOT (not /api/v1), are anonymous, and are excluded from the OpenAPI document.
+# They are for orchestrators and load balancers, not partners.
+
+@host = http://localhost:5000
+
+### Liveness — is the process alive? Checks nothing downstream. Expect 200 {"status":"live"} always.
+GET {{host}}/health/live
+
+### Liveness with a caller-supplied correlation id — it is echoed back on X-Correlation-Id.
+GET {{host}}/health/live
+X-Correlation-Id: my-trace-0001
+
+### Readiness — should this node receive traffic? Gated on the DB; outbox lag is reported, not gated.
+# Expect 200 when healthy:
+# {
+#   "status": "ready",
+#   "checks": [
+#     { "name": "database",          "status": "ok", "detail": "reachable" },
+#     { "name": "outbox-dispatcher", "status": "ok", "detail": "pending=0, oldestDueAgeSeconds=0, poisoned=0" }
+#   ]
+# }
+# When the dispatcher is behind, the outbox line reads "status":"degraded" but the overall status
+# stays "ready" (200) — lag pages an operator, it does not drain the node. See ADR-0018.
+# When the database is unreachable, the whole response is 503 with "status":"not-ready" and the
+# database line reads "status":"down".
+GET {{host}}/health/ready

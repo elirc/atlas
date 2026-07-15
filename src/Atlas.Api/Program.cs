@@ -10,6 +10,10 @@ var app = builder.Build();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 
+// S15: request correlation + timing, FIRST so every log line — including a 401 from the bearer
+// middleware or a 500 from the exception handler — carries the same correlation id.
+app.UseMiddleware<Atlas.Api.Observability.RequestTelemetryMiddleware>();
+
 // Bearer token → RequestContext, for every request. Runs AFTER the exception
 // handler wraps the pipeline so a bad token becomes a problem+json 401.
 app.UseMiddleware<Atlas.Api.Auth.BearerAuthenticationMiddleware>();
@@ -22,6 +26,9 @@ app.UseMiddleware<Atlas.Api.Idempotency.IdempotencyMiddleware>();
 // OpenAPI is served in every environment: the drift test (Api.Tests) and CI diff
 // the committed document against exactly what this endpoint returns.
 app.MapOpenApi();
+
+// S15: liveness + readiness probes (root-mapped, excluded from the OpenAPI contract).
+app.MapHealth();
 
 RouteGroupBuilder api = app.MapGroup("/api/v1");
 api.MapCountries();
@@ -53,6 +60,14 @@ apiV2.MapPayslipsV2();
 if (await StartupTasks.HandleDatabaseCommandsAsync(app, args))
 {
     return;
+}
+
+// S15: fail fast on a broken deploy — a startup self-check probes the database before we accept
+// traffic, so a misconfigured connection string is a loud boot failure, not a flood of 500s. Skipped
+// under the test host (the in-memory SQLite factory is always ready).
+if (!app.Environment.IsEnvironment("Testing"))
+{
+    await StartupSelfCheck.RunAsync(app);
 }
 
 app.Run();

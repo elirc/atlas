@@ -2009,6 +2009,191 @@
         }
       }
     },
+    "/api/v1/payroll/vendor-assignments": {
+      "post": {
+        "tags": [
+          "Payroll vendors"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignPayrollVendorRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VendorAssignmentDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Payroll vendors"
+        ],
+        "parameters": [
+          {
+            "name": "country",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VendorHistoryDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payroll/runs/{id}/shadow-compare": {
+      "post": {
+        "tags": [
+          "Payroll vendors"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VendorComparisonReportDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payroll/runs/{id}/shadow-comparison": {
+      "get": {
+        "tags": [
+          "Payroll vendors"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VendorComparisonReportDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/expenses": {
       "post": {
         "tags": [
@@ -3190,6 +3375,46 @@
           }
         }
       }
+    },
+    "/api/v2/payslips/{id}": {
+      "get": {
+        "tags": [
+          "Payroll v2"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayslipV2Dto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -3289,6 +3514,32 @@
           },
           "summary": {
             "type": "string"
+          }
+        }
+      },
+      "AssignPayrollVendorRequest": {
+        "required": [
+          "country",
+          "vendor",
+          "effectiveFrom"
+        ],
+        "type": "object",
+        "properties": {
+          "country": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "vendor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "effectiveFrom": {
+            "type": "string",
+            "format": "date"
           }
         }
       },
@@ -4558,6 +4809,7 @@
           "periodStart",
           "periodEnd",
           "state",
+          "selectedVendor",
           "createdAtUtc",
           "executedAtUtc"
         ],
@@ -4580,6 +4832,9 @@
             "format": "date"
           },
           "state": {
+            "type": "string"
+          },
+          "selectedVendor": {
             "type": "string"
           },
           "createdAtUtc": {
@@ -4665,6 +4920,49 @@
           }
         }
       },
+      "PayslipLineGroupsDto": {
+        "required": [
+          "employeeDeductions",
+          "unpaidLeave",
+          "employerBurden"
+        ],
+        "type": "object",
+        "properties": {
+          "employeeDeductions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PayslipLineV2Dto"
+            }
+          },
+          "unpaidLeave": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PayslipLineV2Dto"
+            }
+          },
+          "employerBurden": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PayslipLineV2Dto"
+            }
+          }
+        }
+      },
+      "PayslipLineV2Dto": {
+        "required": [
+          "label",
+          "amount"
+        ],
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "amount": {
+            "$ref": "#/components/schemas/MoneyDto"
+          }
+        }
+      },
       "PayslipSummaryDto": {
         "required": [
           "id",
@@ -4685,6 +4983,54 @@
           },
           "gross": {
             "$ref": "#/components/schemas/MoneyDto"
+          },
+          "net": {
+            "$ref": "#/components/schemas/MoneyDto"
+          },
+          "employerCost": {
+            "$ref": "#/components/schemas/MoneyDto"
+          }
+        }
+      },
+      "PayslipV2Dto": {
+        "required": [
+          "id",
+          "runId",
+          "workerId",
+          "periodStart",
+          "periodEnd",
+          "gross",
+          "lines",
+          "net",
+          "employerCost"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "runId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "workerId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "periodStart": {
+            "type": "string",
+            "format": "date"
+          },
+          "periodEnd": {
+            "type": "string",
+            "format": "date"
+          },
+          "gross": {
+            "$ref": "#/components/schemas/MoneyDto"
+          },
+          "lines": {
+            "$ref": "#/components/schemas/PayslipLineGroupsDto"
           },
           "net": {
             "$ref": "#/components/schemas/MoneyDto"
@@ -5064,6 +5410,181 @@
           }
         }
       },
+      "VendorAssignmentDto": {
+        "required": [
+          "id",
+          "country",
+          "vendor",
+          "effectiveFrom",
+          "createdAtUtc"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "country": {
+            "type": "string"
+          },
+          "vendor": {
+            "type": "string"
+          },
+          "effectiveFrom": {
+            "type": "string",
+            "format": "date"
+          },
+          "createdAtUtc": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "VendorComparisonLineDto": {
+        "required": [
+          "workerId",
+          "grossDeltaMinor",
+          "netDeltaMinor",
+          "employerCostDeltaMinor",
+          "currency",
+          "divergent"
+        ],
+        "type": "object",
+        "properties": {
+          "workerId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "grossDeltaMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "netDeltaMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "employerCostDeltaMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "divergent": {
+            "type": "boolean"
+          }
+        }
+      },
+      "VendorComparisonReportDto": {
+        "required": [
+          "runId",
+          "country",
+          "primaryVendor",
+          "shadowVendor",
+          "toleranceMinorUnits",
+          "workerCount",
+          "divergentCount",
+          "maxAbsNetDeltaMinor",
+          "isClean",
+          "createdAtUtc",
+          "lines"
+        ],
+        "type": "object",
+        "properties": {
+          "runId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "country": {
+            "type": "string"
+          },
+          "primaryVendor": {
+            "type": "string"
+          },
+          "shadowVendor": {
+            "type": "string"
+          },
+          "toleranceMinorUnits": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "workerCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "divergentCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "maxAbsNetDeltaMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "isClean": {
+            "type": "boolean"
+          },
+          "createdAtUtc": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VendorComparisonLineDto"
+            }
+          }
+        }
+      },
+      "VendorHistoryDto": {
+        "required": [
+          "country",
+          "current",
+          "assignments"
+        ],
+        "type": "object",
+        "properties": {
+          "country": {
+            "type": "string"
+          },
+          "current": {
+            "type": "string"
+          },
+          "assignments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VendorAssignmentDto"
+            }
+          }
+        }
+      },
       "WebhookDeliveryDto": {
         "required": [
           "id",
@@ -5393,6 +5914,9 @@
       "name": "Payroll"
     },
     {
+      "name": "Payroll vendors"
+    },
+    {
       "name": "Expenses"
     },
     {
@@ -5409,6 +5933,9 @@
     },
     {
       "name": "Compliance"
+    },
+    {
+      "name": "Payroll v2"
     }
   ]
 }

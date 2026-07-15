@@ -1,0 +1,78 @@
+# Atlas — payroll vendors: effective-dated selection, shadow running, v2 payslips (Sprint 12)
+# Login first (see auth.http) and paste the bearer token below.
+# Prepare a payroll run first (see payroll.http) — shadow comparison runs against an existing run.
+
+@host = http://localhost:5000
+@token = PASTE_TOKEN_HERE
+
+### The current vendor + switch history for a country (org admin / HR)
+# With no assignments yet, "current" is AtlasNative (the default every org starts on).
+GET {{host}}/api/v1/payroll/vendor-assignments?country=DEU
+Authorization: Bearer {{token}}
+
+### Schedule a switch to LedgerPay for DEU, effective 1 August (org admin) → 201
+# Effective-dated: a run created BEFORE this date keeps its old vendor (cycle-in-flight rule);
+# a run created on/after it pins LedgerPay. The switch is a calendar decision, not an instant.
+POST {{host}}/api/v1/payroll/vendor-assignments
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "country": "DEU",
+  "vendor": "LedgerPay",
+  "effectiveFrom": "2026-08-01"
+}
+
+### An unknown vendor name → 400 (parsed to the enum at the edge; a typo never reaches the domain)
+POST {{host}}/api/v1/payroll/vendor-assignments
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "country": "DEU",
+  "vendor": "LedgurPay",
+  "effectiveFrom": "2026-08-01"
+}
+
+### A duplicate effective day → 422 (one assignment per country per effective day)
+POST {{host}}/api/v1/payroll/vendor-assignments
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "country": "DEU",
+  "vendor": "AtlasNative",
+  "effectiveFrom": "2026-08-01"
+}
+
+### The history now shows the scheduled switch, newest-effective first
+GET {{host}}/api/v1/payroll/vendor-assignments?country=DEU
+Authorization: Bearer {{token}}
+
+### Shadow-compare a prepared run against the pending vendor (org admin) → 201
+# GATED: the org must be enrolled in the shadow programme (ShadowRunSettings) AND have a pending
+# switch to trial. Un-enrolled or no-pending → 422. The report REDACTS net pay to deltas only.
+# Paste a prepared run id from payroll.http.
+POST {{host}}/api/v1/payroll/runs/PASTE_RUN_ID/shadow-compare
+Authorization: Bearer {{token}}
+
+### The latest comparison report for a run (org admin / HR) — deltas + a divergence verdict, no salaries
+GET {{host}}/api/v1/payroll/runs/PASTE_RUN_ID/shadow-comparison
+Authorization: Bearer {{token}}
+
+### Shadow-compare when not enrolled / no pending switch → 422 (gated, or auto-expired after the flip)
+POST {{host}}/api/v1/payroll/runs/PASTE_RUN_ID/shadow-compare
+Authorization: Bearer {{token}}
+
+# ── API versioning: the same payslip, two shapes ────────────────────────────────────────────────
+
+### v1 payslip — the flat, Kind-tagged line list, served UNCHANGED (byte-for-byte), now DEPRECATED
+# Inspect the response headers: Deprecation, Sunset (RFC 8594), and Link rel="successor-version".
+# Paste a payslip id from a prepared run (see payroll.http).
+GET {{host}}/api/v1/payslips/PASTE_PAYSLIP_ID
+Authorization: Bearer {{token}}
+
+### v2 payslip — the SAME data, lines GROUPED by kind (employeeDeductions / unpaidLeave / employerBurden)
+# Same gross/net/employer-cost as v1; only the line structure evolved. No deprecation headers here.
+GET {{host}}/api/v2/payslips/PASTE_PAYSLIP_ID
+Authorization: Bearer {{token}}

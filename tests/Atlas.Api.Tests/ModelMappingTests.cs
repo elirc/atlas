@@ -30,6 +30,7 @@ public class ModelMappingTests : IClassFixture<AtlasApiFactory>
         "Worker.ProbationEndsOn", // computed from HiredOn + country rules
         "EngagementChecklistItem.IsComplete", // computed from CompletedAtUtc
         "ExpenseClaim.Status", // computed from Approval + ReimbursedAtUtc (S08)
+        "ApiKey.IsActive", // computed from RevokedAtUtc (S10)
     ];
 
     [Fact]

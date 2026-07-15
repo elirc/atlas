@@ -50,14 +50,21 @@ public sealed class AtlasApiFactory : WebApplicationFactory<Program>
             var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
 
             db.Database.EnsureCreated();
-            db.Countries.AddRange(
-                new Country(CountryCode.From("DEU"), "Germany", "EUR"),
-                new Country(CountryCode.From("PHL"), "Philippines", "PHP"),
-                new Country(CountryCode.From("USA"), "United States", "USD"));
-            db.Set<User>().Add(User.Create(
-                EmailAddress.From(OpsEmail), "Test Ops",
-                hasher.Hash(OpsPassword), DateTimeOffset.UnixEpoch, isAtlasOps: true));
-            db.SaveChanges();
+
+            // WHY the guard: WithWebHostBuilder (used by tests that swap an adapter, e.g. a fake
+            // webhook transport) re-runs this ConfigureWebHost over the SAME in-memory connection, so
+            // seeding must be idempotent — a second unguarded insert trips the countries unique index.
+            if (!db.Countries.Any())
+            {
+                db.Countries.AddRange(
+                    new Country(CountryCode.From("DEU"), "Germany", "EUR"),
+                    new Country(CountryCode.From("PHL"), "Philippines", "PHP"),
+                    new Country(CountryCode.From("USA"), "United States", "USD"));
+                db.Set<User>().Add(User.Create(
+                    EmailAddress.From(OpsEmail), "Test Ops",
+                    hasher.Hash(OpsPassword), DateTimeOffset.UnixEpoch, isAtlasOps: true));
+                db.SaveChanges();
+            }
         });
     }
 

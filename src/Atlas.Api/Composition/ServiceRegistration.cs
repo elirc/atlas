@@ -19,6 +19,13 @@ public static class ServiceRegistration
         // Persistence (EF Core + port implementations) — Infrastructure's one entry point.
         builder.Services.AddAtlasPersistence(builder.Configuration);
 
+        // The outbox dispatcher polls in the background — everywhere except the test host, where
+        // the suite drives OutboxRelay by hand so a 5s poll can't race an assertion (ADR-0011).
+        if (!builder.Environment.IsEnvironment("Testing"))
+        {
+            builder.Services.AddAtlasOutboxDispatcher();
+        }
+
         // WHY: TimeProvider.System is registered ONCE, here. Everything downstream
         // takes TimeProvider by constructor — which is why tests can freeze time.
         builder.Services.AddSingleton(TimeProvider.System);
@@ -86,6 +93,14 @@ public static class ServiceRegistration
         builder.Services.AddScoped<Application.Invoicing.ReconcileInvoicePayment>();
         builder.Services.AddScoped<Application.Invoicing.GetInvoice>();
         builder.Services.AddScoped<Application.Invoicing.ListInvoices>();
+        builder.Services.AddScoped<Application.Webhooks.RegisterWebhook>();
+        builder.Services.AddScoped<Application.Webhooks.ListWebhooks>();
+        builder.Services.AddScoped<Application.Webhooks.PauseWebhook>();
+        builder.Services.AddScoped<Application.Webhooks.ListWebhookDeliveries>();
+        builder.Services.AddScoped<Application.Webhooks.RedeliverWebhook>();
+        builder.Services.AddScoped<Application.ApiKeys.CreateApiKey>();
+        builder.Services.AddScoped<Application.ApiKeys.ListApiKeys>();
+        builder.Services.AddScoped<Application.ApiKeys.RevokeApiKey>();
 
         // The caller's identity: one RequestContext per request, exposed to the
         // Application layer as the ICurrentContext port.

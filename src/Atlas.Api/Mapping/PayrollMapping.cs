@@ -1,5 +1,4 @@
 using Atlas.Contracts.V1;
-using Atlas.Domain;
 using Atlas.Domain.Payroll;
 
 namespace Atlas.Api.Mapping;
@@ -8,6 +7,10 @@ namespace Atlas.Api.Mapping;
 // worth of translations, and keeping them beside each other (rather than scrolling past
 // the workforce maps) makes the payroll surface legible on its own. Both classes live in
 // Atlas.Api.Mapping, so `using Atlas.Api.Mapping;` brings every .ToDto() into scope.
+//
+// S12 NOTE: the full-payslip maps moved to PayslipV2Mapping.cs, where the v2 grouping is the
+// canonical projection and v1's flat ToDto(Payslip) is an ADAPTER over it. What stays here is the
+// run/cycle/summary surface — including PayrollRunDto's new SelectedVendor (an additive v1 field).
 internal static class PayrollMapping
 {
     // NOTE: Money.ToDto lives in QuoteMapping (S04) and is reused here — one Money→MoneyDto
@@ -18,7 +21,7 @@ internal static class PayrollMapping
 
     public static PayrollRunDto ToDto(this PayrollRun run) =>
         new(run.Id, run.PayCycleId, run.PeriodStart, run.PeriodEnd,
-            run.State.ToString(), run.CreatedAtUtc, run.ExecutedAtUtc);
+            run.State.ToString(), run.SelectedVendor.ToString(), run.CreatedAtUtc, run.ExecutedAtUtc);
 
     public static PayslipSummaryDto ToSummaryDto(this Payslip payslip) =>
         new(payslip.Id, payslip.WorkerId,
@@ -32,15 +35,4 @@ internal static class PayrollMapping
             run.TotalNet()?.ToDto(),
             run.TotalEmployerCost()?.ToDto(),
             [.. run.Payslips.Select(p => p.ToSummaryDto())]);
-
-    public static PayslipLineDto ToDto(this PayslipLine line) =>
-        new(line.Label, line.Kind.ToString(), line.Amount.ToDto());
-
-    public static PayslipDto ToDto(this Payslip payslip) =>
-        new(payslip.Id, payslip.RunId, payslip.WorkerId,
-            payslip.PeriodStart, payslip.PeriodEnd,
-            payslip.Gross.ToDto(),
-            [.. payslip.Lines.Select(l => l.ToDto())],
-            payslip.Net.ToDto(),
-            payslip.EmployerCost.ToDto());
 }

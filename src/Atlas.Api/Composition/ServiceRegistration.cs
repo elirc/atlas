@@ -81,6 +81,11 @@ public static class ServiceRegistration
         builder.Services.AddScoped<Application.Payroll.GetPayrollRun>();
         builder.Services.AddScoped<Application.Payroll.ListPayrollRuns>();
         builder.Services.AddScoped<Application.Payroll.GetPayslip>();
+        // S12 — vendor selection + shadow running.
+        builder.Services.AddScoped<Application.Payroll.AssignPayrollVendor>();
+        builder.Services.AddScoped<Application.Payroll.ListVendorAssignments>();
+        builder.Services.AddScoped<Application.Payroll.ShadowComparePayrollRun>();
+        builder.Services.AddScoped<Application.Payroll.GetVendorComparison>();
         builder.Services.AddScoped<Application.Expenses.SubmitExpense>();
         builder.Services.AddScoped<Application.Expenses.ApproveExpense>();
         builder.Services.AddScoped<Application.Expenses.DenyExpense>();

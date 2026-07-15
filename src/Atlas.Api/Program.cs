@@ -33,6 +33,7 @@ api.MapQuotes();
 api.MapEngagements();
 api.MapLeave();
 api.MapPayroll();
+api.MapPayrollVendors();
 api.MapExpenses();
 api.MapApprovals();
 api.MapContractors();
@@ -40,6 +41,12 @@ api.MapInvoices();
 api.MapWebhooks();
 api.MapApiKeys();
 api.MapCompliance();
+
+// S12: /api/v2 is a SIBLING base path, not a rewrite — a new version is a new shape over the same
+// domain. Today it re-issues exactly ONE resource (the payslip, with grouped lines); v1 keeps serving
+// everything, the payslip included, from the same use cases (ADR-0015).
+RouteGroupBuilder apiV2 = app.MapGroup("/api/v2");
+apiV2.MapPayslipsV2();
 
 // `dotnet run -- migrate seed` performs database chores and exits.
 if (await StartupTasks.HandleDatabaseCommandsAsync(app, args))

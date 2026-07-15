@@ -17,15 +17,23 @@ public sealed record PayCycleDto(
 public sealed record PreparePayrollRunRequest(Guid CycleId, int Year, int Month);
 
 /// <summary>
-/// A payroll run in the list/index shape: identity, period, state, timestamps. No money
-/// totals and no payslips — those are on the detail view, so the list stays cheap.
+/// A payroll run in the list/index shape: identity, period, state, timestamps, and the vendor
+/// pinned at creation. No money totals and no payslips — those are on the detail view, so the
+/// list stays cheap.
 /// </summary>
+// 📘 SelectedVendor is an ADDITIVE v1 change (S12), not a new version — ADR-0002 §1: "evolution
+// is by addition, never a breaking change." An existing v1 consumer that ignores unknown fields
+// keeps working untouched; a new one learns which engine computed the run. Adding a field is the
+// cheap, in-place kind of evolution; the payslip's line-GROUPING change (which reshuffles an array
+// a client may index) is the expensive kind, and THAT is what earned /api/v2 instead (ADR-0015).
+// The two sit side by side in this sprint as the worked example of "when to add vs when to version."
 public sealed record PayrollRunDto(
     Guid Id,
     Guid PayCycleId,
     DateOnly PeriodStart,
     DateOnly PeriodEnd,
     string State,
+    string SelectedVendor,
     DateTimeOffset CreatedAtUtc,
     DateTimeOffset? ExecutedAtUtc);
 
@@ -52,7 +60,7 @@ public sealed record PayrollRunDetailDto(
 /// <summary>One line of a payslip: what it is, and how much.</summary>
 public sealed record PayslipLineDto(string Label, string Kind, MoneyDto Amount);
 
-/// <summary>GET /api/v1/payslips/{id} — a full payslip with every line.</summary>
+/// <summary>GET /api/v1/payslips/{id} — a full payslip with every line (FLAT list; v2 groups them).</summary>
 public sealed record PayslipDto(
     Guid Id,
     Guid RunId,

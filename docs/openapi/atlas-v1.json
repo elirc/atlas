@@ -2740,6 +2740,269 @@
           }
         }
       }
+    },
+    "/api/v1/webhooks": {
+      "post": {
+        "tags": [
+          "Webhooks"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterWebhookRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookRegisteredDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Webhooks"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WebhookSubscriptionDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/webhooks/{id}": {
+      "delete": {
+        "tags": [
+          "Webhooks"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookSubscriptionDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/webhooks/deliveries": {
+      "get": {
+        "tags": [
+          "Webhooks"
+        ],
+        "parameters": [
+          {
+            "name": "subscriptionId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WebhookDeliveryDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/webhooks/deliveries/{id}/redeliver": {
+      "post": {
+        "tags": [
+          "Webhooks"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookDeliveryDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/api-keys": {
+      "post": {
+        "tags": [
+          "ApiKeys"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateApiKeyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiKeyCreatedDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "ApiKeys"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ApiKeyDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/api-keys/{id}": {
+      "delete": {
+        "tags": [
+          "ApiKeys"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2753,6 +3016,62 @@
           "acceptedOn": {
             "type": "string",
             "format": "date"
+          }
+        }
+      },
+      "ApiKeyCreatedDto": {
+        "required": [
+          "apiKey",
+          "key"
+        ],
+        "type": "object",
+        "properties": {
+          "apiKey": {
+            "$ref": "#/components/schemas/ApiKeyDto"
+          },
+          "key": {
+            "type": "string"
+          }
+        }
+      },
+      "ApiKeyDto": {
+        "required": [
+          "id",
+          "name",
+          "displayPrefix",
+          "scopes",
+          "active",
+          "createdAtUtc",
+          "revokedAtUtc"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "displayPrefix": {
+            "type": "string"
+          },
+          "scopes": {
+            "type": "string"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "createdAtUtc": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "revokedAtUtc": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
           }
         }
       },
@@ -3070,6 +3389,30 @@
           },
           "currency": {
             "type": "string"
+          }
+        }
+      },
+      "CreateApiKeyRequest": {
+        "required": [
+          "name",
+          "scopes"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "scopes": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
           }
         }
       },
@@ -4270,6 +4613,30 @@
           }
         }
       },
+      "RegisterWebhookRequest": {
+        "required": [
+          "url",
+          "events"
+        ],
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "events": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
       "SendOfferRequest": {
         "required": [
           "candidateName",
@@ -4417,6 +4784,122 @@
               "string"
             ],
             "format": "double"
+          }
+        }
+      },
+      "WebhookDeliveryDto": {
+        "required": [
+          "id",
+          "subscriptionId",
+          "eventType",
+          "status",
+          "attempts",
+          "responseStatusCode",
+          "lastError",
+          "createdAtUtc",
+          "deliveredAtUtc"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "subscriptionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "eventType": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "attempts": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "responseStatusCode": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "lastError": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "createdAtUtc": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "deliveredAtUtc": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "WebhookRegisteredDto": {
+        "required": [
+          "subscription",
+          "secret"
+        ],
+        "type": "object",
+        "properties": {
+          "subscription": {
+            "$ref": "#/components/schemas/WebhookSubscriptionDto"
+          },
+          "secret": {
+            "type": "string"
+          }
+        }
+      },
+      "WebhookSubscriptionDto": {
+        "required": [
+          "id",
+          "url",
+          "events",
+          "active",
+          "createdAtUtc",
+          "pausedAtUtc"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "url": {
+            "type": "string"
+          },
+          "events": {
+            "type": "string"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "createdAtUtc": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "pausedAtUtc": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
           }
         }
       },
@@ -4575,6 +5058,12 @@
     },
     {
       "name": "Invoices"
+    },
+    {
+      "name": "Webhooks"
+    },
+    {
+      "name": "ApiKeys"
     }
   ]
 }

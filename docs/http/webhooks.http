@@ -1,0 +1,90 @@
+### Atlas S10 — the integration surface by hand: webhooks, idempotency, API keys.
+### Set @token from a register-org / login response first.
+
+@base = http://localhost:5080/api/v1
+@token = PASTE_A_SESSION_TOKEN
+
+### ---------------------------------------------------------------------------
+### Webhooks
+### ---------------------------------------------------------------------------
+
+### Register a webhook (all events). The response reveals the signing secret ONCE — store it.
+POST {{base}}/webhooks
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "url": "https://partner.example/atlas-hooks",
+  "events": []
+}
+
+### List subscriptions (no secret is ever returned here).
+GET {{base}}/webhooks
+Authorization: Bearer {{token}}
+
+### The delivery log — narrow to one subscription to watch its attempts and backoff.
+GET {{base}}/webhooks/deliveries?subscriptionId=PASTE_SUBSCRIPTION_ID
+Authorization: Bearer {{token}}
+
+### Redeliver a failed delivery (re-signs and re-sends the ORIGINAL payload).
+POST {{base}}/webhooks/deliveries/PASTE_DELIVERY_ID/redeliver
+Authorization: Bearer {{token}}
+
+### Pause a subscription (idempotent).
+DELETE {{base}}/webhooks/PASTE_SUBSCRIPTION_ID
+Authorization: Bearer {{token}}
+
+### Verifying a signature (pseudocode a partner runs):
+###   header  = X-Atlas-Signature: t=1737000000,v1=<hex>
+###   signed  = "{t}.{raw_body}"
+###   expect  = hmac_sha256(secret, signed)  (hex, lowercase)
+###   accept iff constant_time_equals(expect, v1) AND abs(now - t) <= tolerance
+
+### ---------------------------------------------------------------------------
+### Idempotency — money-moving POSTs REQUIRE Idempotency-Key
+### ---------------------------------------------------------------------------
+
+### Pay an approved invoice. Retrying with the SAME key replays this response (no second charge).
+POST {{base}}/invoices/PASTE_INVOICE_ID/pay
+Authorization: Bearer {{token}}
+Idempotency-Key: 5f3c9e1a-pay-attempt-1
+
+### The retry — identical request + key → 200 with header `Idempotency-Replayed: true`.
+POST {{base}}/invoices/PASTE_INVOICE_ID/pay
+Authorization: Bearer {{token}}
+Idempotency-Key: 5f3c9e1a-pay-attempt-1
+
+### Missing key on a money-moving POST → 400.
+POST {{base}}/invoices/PASTE_INVOICE_ID/pay
+Authorization: Bearer {{token}}
+
+### Same key, DIFFERENT request → 422 idempotency-conflict.
+POST {{base}}/invoices/A_DIFFERENT_INVOICE_ID/pay
+Authorization: Bearer {{token}}
+Idempotency-Key: 5f3c9e1a-pay-attempt-1
+
+### ---------------------------------------------------------------------------
+### Partner API keys — scoped, hashed at rest, revealed once
+### ---------------------------------------------------------------------------
+
+### Mint a scoped key. The `key` in the response is shown ONCE.
+POST {{base}}/api-keys
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Partner dashboard (read-only)",
+  "scopes": ["read:workers", "read:invoices"]
+}
+
+### Use the key as a bearer credential. read:webhooks is required for this call → 403 with the key above.
+GET {{base}}/webhooks
+Authorization: Bearer atk_PASTE_THE_ONE_TIME_KEY
+
+### List keys (display prefix only — never the raw key or its hash).
+GET {{base}}/api-keys
+Authorization: Bearer {{token}}
+
+### Revoke a key — the next request presenting it is 401.
+DELETE {{base}}/api-keys/PASTE_API_KEY_ID
+Authorization: Bearer {{token}}

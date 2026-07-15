@@ -1,3 +1,4 @@
+using Atlas.Api.Idempotency;
 using Atlas.Application.Errors;
 using Atlas.Domain;
 using Microsoft.AspNetCore.Diagnostics;
@@ -41,6 +42,13 @@ public sealed class AtlasExceptionHandler(IProblemDetailsService problemDetails)
                 StatusCodes.Status422UnprocessableEntity,
                 AtlasProblems.DomainRuleViolated,
                 "Business rule violated"),
+            // S10: same idempotency key, different request body. Well-formed, but semantically a
+            // contradiction the client must fix — a 422 with its OWN type so integrations can tell it
+            // apart from a business-rule 422 (retry-with-a-fresh-key vs fix-the-request).
+            IdempotencyConflictException => (
+                StatusCodes.Status422UnprocessableEntity,
+                AtlasProblems.IdempotencyConflict,
+                "Idempotency key conflict"),
             UnauthenticatedException => (
                 StatusCodes.Status401Unauthorized,
                 AtlasProblems.Unauthenticated,

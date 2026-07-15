@@ -46,7 +46,23 @@ public static class DependencyInjection
         services.AddScoped<IAuditTrail, EfAuditTrail>();
         services.AddScoped<IQuoteRepository, QuoteRepository>();
         services.AddScoped<IEngagementRepository, EngagementRepository>();
-        services.AddScoped<IEventSink, Messaging.LoggingEventSink>();
+        // S10 — events no longer publish inline; IEventSink now ENQUEUES an outbox row in the
+        // use case's own transaction (OutboxEventSink), and the dispatcher delivers post-commit
+        // through the IEventDelivery adapters. The publish-before-commit ordering in the use cases
+        // is now correct rather than a phantom-event bug (ADR-0011).
+        services.AddScoped<IEventSink, Outbox.OutboxEventSink>();
+        services.AddScoped<IEventDelivery, Outbox.LoggingEventDelivery>();
+        services.AddScoped<IEventDelivery, Webhooks.WebhookEventDelivery>();
+        services.AddScoped<Outbox.OutboxRelay>();
+        // S10 — idempotency store for the Idempotency-Key middleware (harvests the double-pay flaw).
+        services.AddScoped<IIdempotencyStore, Idempotency.EfIdempotencyStore>();
+        // S10 — webhooks: subscriptions + delivery log + the HTTP transport (a named HttpClient).
+        services.AddScoped<IWebhookSubscriptionRepository, WebhookSubscriptionRepository>();
+        services.AddScoped<IWebhookDeliveryRepository, WebhookDeliveryRepository>();
+        services.AddScoped<IWebhookTransport, Webhooks.HttpWebhookTransport>();
+        services.AddHttpClient("webhooks");
+        // S10 — partner API keys.
+        services.AddScoped<IApiKeyRepository, ApiKeyRepository>();
         services.AddScoped<IQuoteReader, Adapters.QuoteReader>();
         services.AddScoped<ILeavePolicyRepository, LeavePolicyRepository>();
         services.AddScoped<ILeaveRequestRepository, LeaveRequestRepository>();
@@ -73,7 +89,19 @@ public static class DependencyInjection
         // Stateless crypto services — singletons on purpose.
         services.AddSingleton<IPasswordHasher, Security.Pbkdf2PasswordHasher>();
         services.AddSingleton<ISessionTokens, Security.SessionTokenService>();
+        services.AddSingleton<ISecretGenerator, Security.SecretGenerator>();
 
+        return services;
+    }
+
+    /// <summary>
+    /// Registers the in-process outbox dispatcher (a hosted background service). Kept separate so the
+    /// composition root can decline it in the test environment — tests drive <see cref="Outbox.OutboxRelay"/>
+    /// directly for determinism, without a 5-second poll racing their assertions.
+    /// </summary>
+    public static IServiceCollection AddAtlasOutboxDispatcher(this IServiceCollection services)
+    {
+        services.AddHostedService<Outbox.OutboxDrainService>();
         return services;
     }
 }

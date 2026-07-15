@@ -36,4 +36,16 @@ public static class AuthHelpers
             new AuthenticationHeaderValue("Bearer", token);
         return client;
     }
+
+    /// <summary>
+    /// POST to a money-moving endpoint with a fresh <c>Idempotency-Key</c> (mandatory since S10).
+    /// Pass an explicit <paramref name="key"/> to simulate a client retry.
+    /// </summary>
+    public static Task<HttpResponseMessage> PostMoneyMoveAsync(
+        this HttpClient client, string url, string? key = null)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Post, url);
+        request.Headers.Add("Idempotency-Key", key ?? Guid.NewGuid().ToString());
+        return client.SendAsync(request);
+    }
 }

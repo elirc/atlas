@@ -29,6 +29,22 @@ public sealed class RequestContext : ICurrentContext
         RawToken = rawToken;
     }
 
+    /// <summary>
+    /// Attach a partner API-key principal: a machine acting inside one org. It authenticates as an
+    /// org admin (its authority within the org) but is NARROWED by scopes, which the auth middleware
+    /// enforces per-request before this attach runs. UserId carries the key id so the audit log
+    /// attributes actions to the specific key, not a person.
+    /// </summary>
+    internal void AttachApiKey(Guid orgId, Guid apiKeyId)
+    {
+        IsAuthenticated = true;
+        UserId = apiKeyId;
+        IsAtlasOps = false;
+        OrgId = orgId;
+        Role = Atlas.Domain.Access.Role.OrgAdmin;
+        RawToken = null;
+    }
+
     public void RequireUser()
     {
         if (!IsAuthenticated)

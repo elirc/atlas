@@ -1,6 +1,8 @@
 using Atlas.Contracts.V1;
+using Atlas.Domain.Auditing;
 using Atlas.Domain.Countries;
 using Atlas.Domain.Orgs;
+using Atlas.Domain.Workforce;
 
 namespace Atlas.Api.Mapping;
 
@@ -14,4 +16,16 @@ internal static class DtoMapping
 
     public static ClientOrgDto ToDto(this ClientOrg org) =>
         new(org.Id, org.Name, org.CreatedAtUtc);
+
+    public static WorkerDto ToDto(this Worker worker) =>
+        new(worker.Id, worker.FullName, worker.ContactEmail.Value, worker.Country.Value,
+            worker.HiredOn, worker.ProbationEndsOn, worker.IsInProbation(), worker.CreatedAtUtc);
+
+    public static EmploymentTermsDto ToDto(this EmploymentRecord record) =>
+        new(record.Id, record.EffectiveFrom, record.JobTitle, record.AnnualSalary,
+            record.SalaryCurrency, record.WeeklyHours);
+
+    public static AuditEntryDto ToDto(this AuditEntry entry) =>
+        new(entry.Id, entry.Action, entry.SubjectType, entry.SubjectId,
+            entry.ActorUserId, entry.DetailsJson, entry.AtUtc);
 }

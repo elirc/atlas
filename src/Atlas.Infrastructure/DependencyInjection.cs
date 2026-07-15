@@ -41,6 +41,9 @@ public static class DependencyInjection
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IMembershipRepository, MembershipRepository>();
         services.AddScoped<ISessionRepository, SessionRepository>();
+        services.AddScoped<IWorkerRepository, WorkerRepository>();
+        services.AddScoped<IEmploymentRecordRepository, EmploymentRecordRepository>();
+        services.AddScoped<IAuditTrail, EfAuditTrail>();
         services.AddScoped<IUnitOfWork, EfUnitOfWork>();
 
         // Stateless crypto services — singletons on purpose.

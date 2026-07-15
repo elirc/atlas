@@ -21,6 +21,15 @@ public class ModelMappingTests : IClassFixture<AtlasApiFactory>
 
     public ModelMappingTests(AtlasApiFactory factory) => _factory = factory;
 
+    // WHY: EF's runtime model cannot distinguish "deliberately Ignore()d" from
+    // "silently forgotten" — so deliberate exceptions are declared HERE, visibly,
+    // where a reviewer sees every one. A computed property belongs on this list;
+    // a timestamp never does.
+    private static readonly HashSet<string> DeliberatelyUnmapped =
+    [
+        "Worker.ProbationEndsOn", // computed from HiredOn + country rules
+    ];
+
     [Fact]
     public void Every_public_property_of_every_mapped_entity_is_mapped()
     {
@@ -42,7 +51,8 @@ public class ModelMappingTests : IClassFixture<AtlasApiFactory>
 
             unmapped.AddRange(
                 publicProps.Where(name => !mapped.Contains(name))
-                    .Select(name => $"{entityType.ClrType.Name}.{name}"));
+                    .Select(name => $"{entityType.ClrType.Name}.{name}")
+                    .Where(qualified => !DeliberatelyUnmapped.Contains(qualified)));
         }
 
         Assert.True(unmapped.Count == 0,

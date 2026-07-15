@@ -1,0 +1,64 @@
+# Atlas — workers, effective-dated terms, audit log (Sprint 03)
+# Login first (see auth.http) and paste the bearer token below.
+
+@host = http://localhost:5000
+@token = PASTE_TOKEN_HERE
+
+### Hire a worker (HR manager or org admin) → 201
+POST {{host}}/api/v1/workers
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "fullName": "Maria Santos",
+  "contactEmail": "maria.santos@example.com",
+  "country": "DEU",
+  "hiredOn": "2026-08-01",
+  "jobTitle": "Engineer",
+  "annualSalary": 60000,
+  "weeklyHours": 40
+}
+
+### The worker, with the terms in force today (note probation fields)
+GET {{host}}/api/v1/workers/PASTE_WORKER_ID
+Authorization: Bearer {{token}}
+
+### Give a raise effective November 1st → 201 (an APPEND, not an update)
+POST {{host}}/api/v1/workers/PASTE_WORKER_ID/terms
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "effectiveFrom": "2026-11-01",
+  "jobTitle": "Senior Engineer",
+  "annualSalary": 75000,
+  "weeklyHours": 40
+}
+
+### Time travel: terms as of September (before the raise)
+GET {{host}}/api/v1/workers/PASTE_WORKER_ID/terms?asOf=2026-09-15
+Authorization: Bearer {{token}}
+
+### ...and as of December (after) — same history, different answer
+GET {{host}}/api/v1/workers/PASTE_WORKER_ID/terms?asOf=2026-12-01
+Authorization: Bearer {{token}}
+
+### Retroactivity: terms before the hire date → 422
+POST {{host}}/api/v1/workers/PASTE_WORKER_ID/terms
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "effectiveFrom": "2020-01-01",
+  "jobTitle": "Time Traveler",
+  "annualSalary": 1,
+  "weeklyHours": 40
+}
+
+### List workers (org-scoped, cursor pagination as everywhere)
+GET {{host}}/api/v1/workers?limit=10
+Authorization: Bearer {{token}}
+
+### The audit log: who did what, when (HR manager and up)
+GET {{host}}/api/v1/audit-log?limit=20
+Authorization: Bearer {{token}}

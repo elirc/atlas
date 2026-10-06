@@ -65,6 +65,26 @@ the map of what may depend on what — and CI fails if the map is violated.
   harvested later with failing tests. When you reach the reveal, go back and re-read the sprints
   where they were planted — and notice what the review comments *didn't* say.
 
+## After the fifteen sprints
+
+The course is complete (tag `v1.0.0`), so the closing materials are part of the syllabus —
+in this order:
+
+1. [`docs/sprints/flaw-ledger.md`](docs/sprints/flaw-ledger.md) — the five planted defects:
+   where each was planted, what the review comments deliberately didn't say, and the failing
+   test that harvested it. Re-read the planting sprints afterwards; spotting what you missed
+   the first time is the exercise.
+2. [`docs/COURSE-RETROSPECTIVE.md`](docs/COURSE-RETROSPECTIVE.md) — what the course itself
+   would do differently. Read it last; it spoils the arcs.
+3. [`docs/postmortems/`](docs/postmortems/) — two incident writeups (the double-pay window,
+   the outbox stall). Treat each as a drill: read only the symptoms section, write your own
+   hypothesis, then compare.
+4. [`docs/runbooks/`](docs/runbooks/) — operational procedures. Pick one (say,
+   `outbox-dispatcher-lag.md`) and trace every command in it back to the code that makes the
+   command meaningful.
+5. [`docs/security/threat-model.md`](docs/security/threat-model.md) and the Sprint 13 audit —
+   the difference between "we added auth" and a security posture you can defend in review.
+
 ## Ground rules for self-study
 
 - Don't skip ahead of the commit order inside a PR; the sequence is deliberate.
